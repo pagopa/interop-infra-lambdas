@@ -1,4 +1,5 @@
 #!/bin/bash
+# EASYRSA_BATCH_MODE=1 EASYRSA_PATH=/Users/manuelm/Documents/repo/PagoPA/ClientVPN/easy-rsa/easyrsa3 EASYRSA_PKI_DIR=/Users/manuelm/Documents/repo/PagoPA/ClientVPN/easyrsa3/pki-dir CLIENT_NAME=manuel.test6 sh revoke_client.sh
 set -euo pipefail
 
 # Check EASYRSA_PATH is defined
@@ -19,10 +20,7 @@ if [ -z "$CLIENT_NAME" ]; then
 fi
 
 ### Step1. Revoke
-EASYRSA_BATCH=0
-if [[ $EASYRSA_BATCH_MODE -eq 1 ]]; then
-    EASYRSA_BATCH=1
-fi
+EASYRSA_BATCH="${EASYRSA_BATCH_MODE:-0}"
 
 set +e
 EASYRSA_BATCH=$EASYRSA_BATCH $EASYRSA_PATH/easyrsa --pki-dir="$EASYRSA_PKI_DIR" revoke $CLIENT_NAME &> $EASYRSA_PKI_DIR/tmp.txt

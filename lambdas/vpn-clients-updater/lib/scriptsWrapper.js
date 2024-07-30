@@ -25,7 +25,7 @@ const runCommand = async (command, args = []) => {
 };
 
 module.exports = {
-  createClient: (clientName, clientEmail) => runCommand('create-client', [clientName, clientEmail]),
+  createClient: (clientName, clientEmail) => runCommand('create-client', [clientName, clientEmail, defaultCredentialsDurationDays]),
   isValidClient: (clientName) => runCommand('is-valid-client', [clientName]),
   isRevokedClient: (clientName) => runCommand('is-revoked-client', [clientName]),
   listValidClients: () => runCommand('list-valid-clients', []),

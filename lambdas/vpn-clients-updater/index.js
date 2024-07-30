@@ -16,7 +16,7 @@ const ERROR_MESSAGES = {
 }
 
 exports.handler = async function (event) {
-    const { action, clientName, clientEmail } = event;
+    const { action, clientName, clientEmail, defaultCredentialsDurationDays } = event;
 
     if (!isValidAction(action)) {
         return createErrorResponse(ERROR_MESSAGES.INVALID_ACTION(action));
@@ -48,7 +48,7 @@ exports.handler = async function (event) {
                 if (!clientEmail) {
                     return createErrorResponse(ERROR_MESSAGES.NULL_CLIENT_EMAIL(clientEmail));
                 }
-                actionResult = await handleCreateClient(clientName, clientEmail);
+                actionResult = await handleCreateClient(clientName, clientEmail, defaultCredentialsDurationDays);
                 console.log(`Client create procedure successfully completed`);
                 break;
 
@@ -84,8 +84,8 @@ exports.handler = async function (event) {
 //     );
 // };
 
-const handleCreateClient = async (clientName, clientEmail) => {
-    const createClientResult = await easyRsaHandler.createClient(clientName, clientEmail);
+const handleCreateClient = async (clientName, clientEmail, defaultCredentialsDurationDays) => {
+    const createClientResult = await easyRsaHandler.createClient(clientName, clientEmail, defaultCredentialsDurationDays);
     const sendResult = await sendClientCredentials(clientName, clientEmail);
 
     return { 
