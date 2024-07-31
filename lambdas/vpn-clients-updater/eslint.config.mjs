@@ -18,7 +18,13 @@ export default [
   {
     rules: {
       "no-unused-vars": "error",
-      "no-undef": "error"
+      "no-undef": "error",
+      "no-promise-executor-return": "error",
+      "no-duplicate-imports": "warn",
+      "no-self-compare": "warn",
+      "no-template-curly-in-string": "warn",
+      "no-unreachable-loop": "warn",
+      "no-useless-assignment": "warn"
     }
   }
 ];
