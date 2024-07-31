@@ -5,6 +5,9 @@ on:
     #types: [opened, synchronize, reopened, closed, edited, ready_for_review, labeled, unlabeled]
     paths:
       - 'lambdas/**/package.json'
+    branches:
+      - main
+      - feature/*
 jobs:
   build:
     runs-on: ubuntu-latest
