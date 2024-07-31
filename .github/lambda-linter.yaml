@@ -1,0 +1,42 @@
+name: PR Event Handler
+
+on:
+  pull_request:
+    #types: [opened, synchronize, reopened, closed, edited, ready_for_review, labeled, unlabeled]
+    paths:
+      - 'lambdas/**/package.json'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+      
+      - name: Find Node.js projects with code updates
+        id: find_updated_nodejs_projects
+        run: |
+          # Find all directories with package.json that have changed src files
+          # Step 1. Find all the updated projects in lambdas directory through diff
+          all_updated_projects=$(git diff --name-only ${{ github.base_ref }} ${{ github.head_ref }} | grep '^lambdas/[^/]\+/.*' | cut -d'/' -f2 | uniq)
+          
+          # Step 2. For all unique update projects names, check if the project contains a package.json (i.e. is a nodejs prj)
+          projects=()
+          for updated_project in $all_updated_projects; do
+            is_nodejs_project=$( find lambdas/$updated_project  -name 'package.json' -exec dirname {} \;)
+            if [[ -n $is_nodejs_project ]]; then
+               projects+=($updated_project)
+            fi
+          done
+
+          echo "projects=${projects[@]}" >> $GITHUB_ENV
+
+      - name: Set up Node.js for each project
+        if: env.projects
+        run: |
+          for project in ${{ env.projects }}; do
+            echo "Setting up Node.js for lambdas/$project"
+            cd lambdas/$project
+            npm install
+            npm run lint
+            cd -
+          done
