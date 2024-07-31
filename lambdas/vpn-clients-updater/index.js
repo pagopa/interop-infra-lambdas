@@ -26,8 +26,9 @@ exports.handler = async function (event) {
         return createErrorResponse(ERROR_MESSAGES.NULL_CLIENT_NAME(clientName));
     }
     
-    let actionResult = null;
     try {
+        let actionResult = null;
+        
         switch (action) {
             // case ACTIONS.VPNCONFIG:
             //     if (!clientEmail) {
