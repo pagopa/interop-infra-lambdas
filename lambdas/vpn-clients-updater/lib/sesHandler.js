@@ -4,7 +4,7 @@ const zipUtils = require('./zipUtils.js');
 const s3Utils = require('./s3Handler.js');
 const sesUtils = require('./sesUtils.js');
 const vpnClientUtils = require('./vpnClientHandler.js');
-
+const { Buffer } = require('buffer');
 /*
  Supported mime types: https://docs.aws.amazon.com/ses/latest/dg/mime-types.html -> no cer, crt
  Send raw email: https://docs.aws.amazon.com/ses/latest/dg/send-email-raw.html
