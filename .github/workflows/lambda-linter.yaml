@@ -29,8 +29,12 @@ jobs:
           projects=$(git diff --name-only origin/$BASE_REF origin/$HEAD_REF | grep '^lambdas/nodejs/[^/]\+' | cut -d'/' -f3 | uniq)
           echo "projects=$projects" >> $GITHUB_ENV
 
+      - name: Print projects
+        run: |
+          echo "Projects: ${{ env.projects }}"
+          
       - name: Lint Node.js projects
-        if: env.projects
+        if: env.projects != ''
         run: |
           for project in ${{ env.projects }}; do
             echo "Setting up Node.js for lambdas/nodejs/$project"
