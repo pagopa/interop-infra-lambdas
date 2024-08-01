@@ -7,7 +7,7 @@ on:
       - 'lambdas/nodejs/**'
     branches:
       - main
-      - feature/*
+      - feature/**
 jobs:
   build:
     runs-on: ubuntu-latest
