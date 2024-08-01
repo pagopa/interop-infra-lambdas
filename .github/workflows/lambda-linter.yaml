@@ -4,7 +4,7 @@ on:
   pull_request:
     #types: [opened, synchronize, reopened, closed, edited, ready_for_review, labeled, unlabeled]
     paths:
-      - 'lambdas/**/package.json'
+      - 'lambdas/nodejs/**'
     branches:
       - main
       - feature/*
@@ -20,26 +20,15 @@ jobs:
         run: |
           # Find all directories with package.json that have changed src files
           # Step 1. Find all the updated projects in lambdas directory through diff
-          all_updated_projects=$(git diff --name-only ${{ github.base_ref }} ${{ github.head_ref }} | grep '^lambdas/[^/]\+/.*' | cut -d'/' -f2 | uniq)
-          
-          # Step 2. For all unique update projects names, check if the project contains a package.json (i.e. is a nodejs prj)
-          projects=()
-          for updated_project in $all_updated_projects; do
-            is_nodejs_project=$( find lambdas/$updated_project  -name 'package.json' -exec dirname {} \;)
-            if [[ -n $is_nodejs_project ]]; then
-               projects+=($updated_project)
-            fi
-          done
+          projects=$(git diff --name-only ${{ github.base_ref }} ${{ github.head_ref }} | grep '^lambdas/nodejs/[^/]\+/src/' | cut -d'/' -f2 | uniq)
+          echo "projects=$projects" >> $GITHUB_ENV
 
-          echo "projects=${projects[@]}" >> $GITHUB_ENV
-
-      - name: Set up Node.js for each project
+      - name: Lint Node.js projects
         if: env.projects
         run: |
           for project in ${{ env.projects }}; do
-            echo "Setting up Node.js for lambdas/$project"
-            cd lambdas/$project
-            npm install
+            echo "Setting up Node.js for lambdas/nodejs/$project"
+            cd lambdas/nodejs/$project
             npm run lint
             cd -
           done
