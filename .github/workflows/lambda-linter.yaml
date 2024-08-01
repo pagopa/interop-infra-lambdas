@@ -26,7 +26,7 @@ jobs:
           
           git fetch origin $BASE_REF $HEAD_REF
           
-          projects=$(git diff --name-only origin/BASE_REF origin/HEAD_REF | grep '^lambdas/nodejs/[^/]\+/src/' | cut -d'/' -f3 | uniq)
+          projects=$(git diff --name-only origin/$BASE_REF origin/$HEAD_REF | grep '^lambdas/nodejs/[^/]\+/src/' | cut -d'/' -f3 | uniq)
           echo "projects=$projects" >> $GITHUB_ENV
 
       - name: Lint Node.js projects
