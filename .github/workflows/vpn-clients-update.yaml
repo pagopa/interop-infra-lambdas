@@ -1,0 +1,62 @@
+name: VPN CLients Update Workflow
+
+on:
+  push:
+    branches:
+      - main
+      - vpnautomation
+    paths:
+      - 'path/to/file/'  
+
+jobs:
+  process_pr:
+    name: Process clients update
+    runs-on: ubuntu-22.04
+    timeout-minutes: ${{ vars.VPN_AUTOMATION_TIMEOUT_MINUTES }}
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+      
+    - name: Upload JSON to S3
+      id: s3_upload
+      run: |
+        set -euo pipefail
+
+        aws s3 cp ${{ vars.VPN_CLIENTS_PATH }} s3://${{ vars.VPN_CLIENTS_BUCKET_NAME }}/${{ vars.VPN_CLIENTS_BUCKET_PREFIX }} --only-show-errors
+
+    - name: Start AWS Step Function
+      id: start_step_function
+      run: |
+        set -euo pipefail
+        
+        step_function_arn=${{ vars.VPN_STEP_FUNCTION_ARN }}
+        execution_arn=$(aws stepfunctions start-execution --state-machine-arn $step_function_arn --input file://${{ vars.VPN_CLIENTS_PATH }} --query 'executionArn' --output text)
+        echo "EXECUTION_ARN=${execution_arn}" >> $GITHUB_ENV
+        echo "Step Function Execution ARN: $execution_arn
+        
+    - name: Wait Step Function execution
+      run: |
+        set -euo pipefail
+        
+        execution_arn=${{ env.EXECUTION_ARN }}
+
+        while true; do
+          status=$(aws stepfunctions describe-execution --execution-arn $execution_arn --query 'status' --output text)
+          echo "StepFunction ($execution_arn) current status: $status"
+          if [[ "$status" == "SUCCEEDED" ]]; then
+            echo "Step Function execution succeeded."
+            break
+          elif [[ "$status" == "FAILED" || "$status" == "TIMED_OUT" || "$status" == "ABORTED" ]]; then
+            echo "Step Function execution failed with status: $status"
+            exit 1
+          else
+            echo "Waiting for Step Function to complete..."
+            sleep 5
+          fi
+        done
