@@ -27,7 +27,7 @@ exports.handler = async function (event) {
     }
     
     try {
-        let actionResult = null;
+        let actionResult;
         
         switch (action) {
             // case ACTIONS.VPNCONFIG:
