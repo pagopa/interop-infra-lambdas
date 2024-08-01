@@ -16,7 +16,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
       
-      - name: Find Node.js projects with code updates
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Check Node.js updated projects
         id: find_updated_nodejs_projects
         run: |
           BASE_REF="${{ github.event.pull_request.base.ref }}"
@@ -31,7 +35,7 @@ jobs:
 
       - name: Print projects
         run: |
-          echo "Projects: ${{ env.projects }}"
+          echo "Projects with diffs: ${{ env.projects }}"
           
       - name: Lint Node.js projects
         if: env.projects != ''
