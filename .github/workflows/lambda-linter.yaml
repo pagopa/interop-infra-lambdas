@@ -8,6 +8,7 @@ on:
     branches:
       - main
       - feature/**
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -29,6 +30,7 @@ jobs:
           for project in ${{ env.projects }}; do
             echo "Setting up Node.js for lambdas/nodejs/$project"
             cd lambdas/nodejs/$project
+
             npm run lint
             cd -
           done
