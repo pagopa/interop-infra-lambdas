@@ -104,5 +104,5 @@ jobs:
         uses: docker/build-push-action@a8d35412fb758de9162fd63e3fa3f0942bdedb4d
         with:
           context: ${{ env.PROJECTS_PREFIX_PATH }}/${{ matrix.project }}
-          file: Dockerfile
+          file: ${{ env.PROJECTS_PREFIX_PATH }}/${{ matrix.project }}/Dockerfile
           push: false
