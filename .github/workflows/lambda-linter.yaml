@@ -37,9 +37,15 @@ jobs:
           
           set +e
           git fetch origin $BASE_REF $HEAD_REF
-          projects=$(git diff --name-only origin/$BASE_REF origin/$HEAD_REF | grep '^$PROJECTS_PREFIX_PATH/[^/]\+' | cut -d'/' -f3 | uniq | jq -R -s -c 'split("\n")[:-1]' )
+          projects=$(git diff --name-only origin/$BASE_REF origin/$HEAD_REF | grep "^$PROJECTS_PREFIX_PATH/[^/]\+" | cut -d'/' -f3 | uniq | jq -R -s -c 'split("\n")[:-1]' )
+          diff_result=$?
           set -e
           
+          if [[ $diff_result != 0 ]]; then
+            echo "No diff found"
+            exit $diff_result
+          fi
+
           echo "projects=$projects" >> $GITHUB_OUTPUT
           echo $projects
   
