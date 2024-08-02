@@ -25,6 +25,8 @@ jobs:
       
       - name: Check Node.js updated projects
         id: find_updated_nodejs_projects
+        env:
+          PROJECTS_PREFIX_PATH: ${{ env.PROJECTS_PREFIX_PATH }}
         run: |
           set -euo pipefail
           
