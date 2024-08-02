@@ -56,5 +56,4 @@ exports.updateVpnEndpointCRL = async function (vpnEndpointRegion, vpnEndpointId,
     }
 };
 
-
 const getEC2Client = (region) => new EC2Client({ region });
