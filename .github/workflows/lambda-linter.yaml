@@ -9,20 +9,25 @@ on:
       - main
       - feature/**
 
+env:
+  ENVIRONMENT: dev
+  PROJECTS_PREFIX_PATH: "lambdas/nodejs"
+  DOCKER_IMAGE_PREFIX: "interop"
+      
 jobs:
-  build:
+  workflow_setup:
     runs-on: ubuntu-latest
+    outputs:
+      projects: ${{ steps.find_updated_nodejs_projects.outputs.projects }}
     steps:
       - name: Checkout code
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
       
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
       - name: Check Node.js updated projects
         id: find_updated_nodejs_projects
         run: |
+          set -euo pipefail
+          
           BASE_REF="${{ github.event.pull_request.base.ref }}"
           HEAD_REF="${{ github.event.pull_request.head.ref }}"
           echo "BASE_REF: $BASE_REF"
@@ -30,20 +35,63 @@ jobs:
           
           git fetch origin $BASE_REF $HEAD_REF
           
-          projects=$(git diff --name-only origin/$BASE_REF origin/$HEAD_REF | grep '^lambdas/nodejs/[^/]\+' | cut -d'/' -f3 | uniq | tr '\n' ' ')
-          echo "projects=$projects" >> $GITHUB_ENV
+          projects=$(git diff --name-only origin/$BASE_REF origin/$HEAD_REF | grep '^$PROJECTS_PREFIX_PATH/[^/]\+' | cut -d'/' -f3 | uniq | jq -R -s -c 'split("\n")[:-1]' )
+          echo "projects=$projects" >> $GITHUB_OUTPUT
+  
+  check:
+    name: ${{ matrix.project }}
+    runs-on: ubuntu-latest
+    needs: [workflow_setup]
+    strategy:
+      matrix:
+        project: ${{ fromJson(needs.workflow_setup.outputs.projects) }}
+      fail-fast: false
+      - name: Checkout code
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+    
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
+    
+    - name: Lint Node.js
+      run: |
+        set -euo pipefail
 
-      - name: Print projects
-        run: |
-          echo "Projects with diffs: ${{ env.projects }}"
-          
-      - name: Lint Node.js projects
-        if: env.projects != ''
-        run: |
-          for project in ${{ env.projects }}; do
-            echo "Setting up Node.js for lambdas/nodejs/$project"
-            cd lambdas/nodejs/$project
-            npm i
-            npm run lint
-            cd -
-          done
+        echo "Setting up Node.js for $PROJECTS_PREFIX_PATH/${{ matrix.project }}"
+        cd $PROJECTS_PREFIX_PATH/${{ matrix.project }}
+        npm i
+        npm run lint
+
+    #- name: Lint Node.js projects
+    #  if: env.projects != ''
+    #  run: |
+    #    set -euo pipefail
+#
+    #    IFS=' ' read -r -a project_array <<< ${{ env.projects }}
+    #    for project in ${project_array[@]}; do
+    #      echo "Setting up Node.js for $PROJECTS_PREFIX_PATH/$project"
+    #      cd $PROJECTS_PREFIX_PATH/$project
+    #      npm i
+    #      npm run lint
+    #      cd -
+    #    done
+    
+  build:
+    name: ${{ matrix.projects }}
+    runs-on: ubuntu-latest
+    needs: [workflow_setup]
+    strategy:
+      matrix:
+        project: ${{ fromJson(needs.workflow_setup.outputs.projects) }}
+      fail-fast: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+      
+      - name: Build only Docker image
+        id: build_docker
+        uses: docker/build-push-action@a8d35412fb758de9162fd63e3fa3f0942bdedb4d
+        with:
+          context: .
+          file: $PROJECTS_PREFIX_PATH/${{ matrix.project }}/Dockerfile
+          push: false
