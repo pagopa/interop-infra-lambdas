@@ -12,7 +12,6 @@ on:
 env:
   ENVIRONMENT: dev
   PROJECTS_PREFIX_PATH: "lambdas/nodejs"
-  DOCKER_IMAGE_PREFIX: "interop"
       
 jobs:
   workflow_setup:
@@ -25,8 +24,6 @@ jobs:
       
       - name: Check Node.js updated projects
         id: find_updated_nodejs_projects
-        env:
-          PROJECTS_PREFIX_PATH: ${{ env.PROJECTS_PREFIX_PATH }}
         run: |
           set -euo pipefail
           
@@ -70,8 +67,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          echo "Setting up Node.js for $PROJECTS_PREFIX_PATH/${{ matrix.project }}"
-          cd $PROJECTS_PREFIX_PATH/${{ matrix.project }}
+          echo "Setting up Node.js for ${{ env.PROJECTS_PREFIX_PATH }}/${{ matrix.project }}"
+          cd ${{ env.PROJECTS_PREFIX_PATH }}/${{ matrix.project }}
           npm i
           npm run lint
 
@@ -107,5 +104,5 @@ jobs:
         uses: docker/build-push-action@a8d35412fb758de9162fd63e3fa3f0942bdedb4d
         with:
           context: .
-          file: $PROJECTS_PREFIX_PATH/${{ matrix.project }}/Dockerfile
+          file: ${{ env.PROJECTS_PREFIX_PATH }}/${{ matrix.project }}/Dockerfile
           push: false
