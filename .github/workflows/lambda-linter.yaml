@@ -26,7 +26,7 @@ jobs:
       - name: Check Node.js updated projects
         id: find_updated_nodejs_projects
         run: |
-          set -euo pipefail
+          #set -euo pipefail
           
           BASE_REF="${{ github.event.pull_request.base.ref }}"
           HEAD_REF="${{ github.event.pull_request.head.ref }}"
@@ -34,9 +34,11 @@ jobs:
           echo "HEAD_REF: $HEAD_REF"
           
           git fetch origin $BASE_REF $HEAD_REF
-          
+          echo $?
           projects=$(git diff --name-only origin/$BASE_REF origin/$HEAD_REF | grep '^$PROJECTS_PREFIX_PATH/[^/]\+' | cut -d'/' -f3 | uniq | jq -R -s -c 'split("\n")[:-1]' )
+          echo $?
           echo "projects=$projects" >> $GITHUB_OUTPUT
+          echo $?
   
   check:
     name: ${{ matrix.project }}
