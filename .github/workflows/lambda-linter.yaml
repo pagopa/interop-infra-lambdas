@@ -33,8 +33,11 @@ jobs:
           echo "BASE_REF: $BASE_REF"
           echo "HEAD_REF: $HEAD_REF"
           
+          set +e
           git fetch origin $BASE_REF $HEAD_REF
           projects=$(git diff --name-only origin/$BASE_REF origin/$HEAD_REF | grep '^$PROJECTS_PREFIX_PATH/[^/]\+' | cut -d'/' -f3 | uniq | jq -R -s -c 'split("\n")[:-1]' )
+          set -e
+          
           echo "projects=$projects" >> $GITHUB_OUTPUT
           echo $projects
   
