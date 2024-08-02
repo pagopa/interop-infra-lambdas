@@ -16,6 +16,5 @@ exports.createZip = function (files) {
         });
     
         archive.finalize();
-    });
-    
+    });   
 }
