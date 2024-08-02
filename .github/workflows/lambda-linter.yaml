@@ -46,35 +46,36 @@ jobs:
       matrix:
         project: ${{ fromJson(needs.workflow_setup.outputs.projects) }}
       fail-fast: false
+    steps:
       - name: Checkout code
-      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
-    
-    - uses: actions/setup-node@v4
-      with:
-        node-version: 20
-    
-    - name: Lint Node.js
-      run: |
-        set -euo pipefail
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      
+      - name: Lint Node.js
+        run: |
+          set -euo pipefail
 
-        echo "Setting up Node.js for $PROJECTS_PREFIX_PATH/${{ matrix.project }}"
-        cd $PROJECTS_PREFIX_PATH/${{ matrix.project }}
-        npm i
-        npm run lint
+          echo "Setting up Node.js for $PROJECTS_PREFIX_PATH/${{ matrix.project }}"
+          cd $PROJECTS_PREFIX_PATH/${{ matrix.project }}
+          npm i
+          npm run lint
 
-    #- name: Lint Node.js projects
-    #  if: env.projects != ''
-    #  run: |
-    #    set -euo pipefail
-#
-    #    IFS=' ' read -r -a project_array <<< ${{ env.projects }}
-    #    for project in ${project_array[@]}; do
-    #      echo "Setting up Node.js for $PROJECTS_PREFIX_PATH/$project"
-    #      cd $PROJECTS_PREFIX_PATH/$project
-    #      npm i
-    #      npm run lint
-    #      cd -
-    #    done
+      #- name: Lint Node.js projects
+      #  if: env.projects != ''
+      #  run: |
+      #    set -euo pipefail
+  #
+      #    IFS=' ' read -r -a project_array <<< ${{ env.projects }}
+      #    for project in ${project_array[@]}; do
+      #      echo "Setting up Node.js for $PROJECTS_PREFIX_PATH/$project"
+      #      cd $PROJECTS_PREFIX_PATH/$project
+      #      npm i
+      #      npm run lint
+      #      cd -
+      #    done
     
   build:
     name: ${{ matrix.projects }}
