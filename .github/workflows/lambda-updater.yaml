@@ -103,7 +103,7 @@ jobs:
         id: build_push
         uses: docker/build-push-action@a8d35412fb758de9162fd63e3fa3f0942bdedb4d
         with:
-          context: .
+          context: ${{ env.PROJECTS_PREFIX_PATH }}/${{ matrix.project }}
           file: ${{ env.PROJECTS_PREFIX_PATH }}/${{ matrix.project }}/Dockerfile
           push: true
           tags: ${{ github.ref_type == 'branch' && steps.meta_latest.outputs.tags || steps.meta_tag.outputs.tags }}
