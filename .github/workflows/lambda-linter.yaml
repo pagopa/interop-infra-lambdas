@@ -10,7 +10,6 @@ on:
       - feature/**
 
 env:
-  ENVIRONMENT: dev
   PROJECTS_PREFIX_PATH: "lambdas/nodejs"
       
 jobs:
