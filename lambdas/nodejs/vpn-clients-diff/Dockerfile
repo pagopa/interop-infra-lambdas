@@ -1,4 +1,4 @@
-FROM public.ecr.aws/lambda/nodejs:20
+FROM public.ecr.aws/lambda/nodejs:20@sha256:396710b85c6d5a4c94c6f2d3a1f48b25228b0d6758a505a78a2e832f9d5df948
 
 RUN dnf -y update && dnf -y install unzip groff less vi sudo tar make openssl
 
