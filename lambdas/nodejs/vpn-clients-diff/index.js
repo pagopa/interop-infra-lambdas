@@ -64,32 +64,27 @@ exports.handler = async function () {
         // Download pki-dir
         const normalizedPkiDir = easyRsaPkiDir.endsWith('/') ? easyRsaPkiDir : `${easyRsaPkiDir}/`;
 
-        // List all objects in the specified easyrsa folder
-        let isTruncated = true;
-        let continuationToken = null;
+        const listObjectsV2CommandInput = {
+            Bucket: easyRsaBucketName,
+            Prefix: `${easyRsaBucketPath}/${normalizedPkiDir}`,
+            MaxKeys: 1,  // Check for at least one object
+            ContinuationToken: continuationToken
+        }
+        const easyRsaData = await s3Client.send(new ListObjectsV2Command(listObjectsV2CommandInput))
         
-        while (isTruncated) {
-            const listObjectsV2CommandInput = {
-                Bucket: easyRsaBucketName,
-                Prefix: `${easyRsaBucketPath}/${normalizedPkiDir}`,
-                MaxKeys: 1,  // Check for at least one object
-                ContinuationToken: continuationToken
-            }
-           const easyRsaData = await s3Client.send(new ListObjectsV2Command(listObjectsV2CommandInput))
-            
-            isTruncated = easyRsaData.IsTruncated;
-            continuationToken = easyRsaData.NextContinuationToken;
-            
-            if (easyRsaData.Contents && easyRsaData.Contents.length > 0) {
-                console.log(`Pki directory DIR "${normalizedPkiDir}" exists in the bucket "${easyRsaBucketName}"`);
-            } else {
-                console.log(`Pki directory DIR "${normalizedPkiDir}" does not exist in the bucket "${easyRsaBucketName}"`);
-                return createErrorResponse(ERROR_MESSAGES.S3_CONTENT_NOT_FOUND(normalizedPkiDir));
-            }
-            
-            for (const obj of easyRsaData.Contents) {
-                
+        let isTruncated = easyRsaData.IsTruncated;
+        let continuationToken = easyRsaData.NextContinuationToken;
+        
+        if (easyRsaData.Contents && easyRsaData.Contents.length > 0) {
+            console.log(`Pki directory DIR "${normalizedPkiDir}" exists in the bucket "${easyRsaBucketName}"`);
+        } else {
+            console.log(`Pki directory DIR "${normalizedPkiDir}" does not exist in the bucket "${easyRsaBucketName}"`);
+            return createErrorResponse(ERROR_MESSAGES.S3_CONTENT_NOT_FOUND(normalizedPkiDir));
+        }
 
+        // List all objects in the specified easyrsa folder
+        while (isTruncated) {
+            for (const obj of easyRsaData.Contents) {
                 const key = obj.Key;
                 const relativePath = key.slice(normalizedPkiDir.length); // Remove folder prefix
                 const localFilePath = path.join(easyRSALocalTmpFolder, relativePath);
