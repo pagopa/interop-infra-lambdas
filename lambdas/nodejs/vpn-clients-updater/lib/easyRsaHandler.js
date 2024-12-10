@@ -1,9 +1,9 @@
 const scriptsWrapper = require('./scriptsWrapper');
 
-exports.createClient = async function (clientName, clientEmail) {
+exports.createClient = async function (clientName, clientEmail, easyRsaPath, easyRsaPkiDir) {
     try {
-        const createClientResult = await scriptsWrapper.createClient(clientName, clientEmail);
-        const isValidClientResult = await scriptsWrapper.isValidClient(clientName);
+        const createClientResult = await scriptsWrapper.createClient(clientName, clientEmail, easyRsaPath, easyRsaPkiDir);
+        const isValidClientResult = await scriptsWrapper.isValidClient(clientName, easyRsaPath, easyRsaPkiDir);
 
         return {
             createResult: createClientResult,
@@ -15,10 +15,10 @@ exports.createClient = async function (clientName, clientEmail) {
     }
 };
 
-exports.revokeClient = async function (clientName) {
+exports.revokeClient = async function (clientName, easyRsaPath, easyRsaPkiDir) {
     try {
-        const revokeClientResult = await scriptsWrapper.revokeClient(clientName);
-        const isRevokedClientResult = await scriptsWrapper.isRevokedClient(clientName);
+        const revokeClientResult = await scriptsWrapper.revokeClient(clientName, easyRsaPath, easyRsaPkiDir);
+        const isRevokedClientResult = await scriptsWrapper.isRevokedClient(clientName, easyRsaPath, easyRsaPkiDir);
 
         return {
             revokeResult: revokeClientResult,

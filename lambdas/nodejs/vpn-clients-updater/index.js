@@ -1,7 +1,9 @@
-const easyRsaHandler = require('./lib/easyRsaHandler.js');
-const sesHandler = require('./lib/sesHandler.js');
+const easyRsaHandler   = require('./lib/easyRsaHandler.js');
+const sesHandler       = require('./lib/sesHandler.js');
 const vpnClientHandler = require('./lib/vpnClientHandler.js');
-
+const s3Handler        = require('./lib/s3Handler.js');
+const responseHandler  = require('./lib/responseHandler.js');
+const path             = require('path');
 const ACTIONS = {
     CREATE: 'CREATE',
     REVOKE: 'REVOKE',
@@ -9,63 +11,82 @@ const ACTIONS = {
     //VPNCONFIG: 'VPNCONFIG'
 }
 
-const ERROR_MESSAGES = {
-    INVALID_ACTION: (action) => `Action must be defined, allowed: ${Object.keys(ACTIONS)}, found: ${action}`,
-    NULL_CLIENT_NAME: (clientName) => `clientName cannot be null, found ${clientName}`,
-    NULL_CLIENT_EMAIL: (clientEmail) => `clientEmail cannot be null, found ${clientEmail}`
-}
-
 exports.handler = async function (event) {
-    const { action, clientName, clientEmail, defaultCredentialsDurationDays } = event;
-
+    let { action, clientName, clientEmail, defaultCredentialsDurationDays } = event;
+    
     if (!isValidAction(action)) {
-        return createErrorResponse(ERROR_MESSAGES.INVALID_ACTION(action));
+        return responseHandler.createErrorResponse(responseHandler.ERROR_MESSAGES.INVALID_ACTION(action));
     }
 
     if (!clientName) {
-        return createErrorResponse(ERROR_MESSAGES.NULL_CLIENT_NAME(clientName));
+        return responseHandler.createErrorResponse(responseHandler.ERROR_MESSAGES.NULL_CLIENT_NAME(clientName));
     }
-    
+
+    const {
+        EASYRSA_BUCKET_NAME: easyRsaBucketName,
+        EASYRSA_BUCKET_REGION: easyRsaBucketRegion,
+        EASYRSA_PATH: easyRsaBucketPath,
+        EASYRSA_PKI_DIR: easyRsaPkiDir 
+    } = process.env;    
+
     try {
         let actionResult;
-        
+        const easyRSALocalTmpFolder = "/tmp"
+        const easyRSABinPath = process.env.EASYRSA_BIN_PATH //Check Dockerfile
+        let localPkiDirPath = null;
+
         switch (action) {
             // case ACTIONS.VPNCONFIG:
             //     if (!clientEmail) {
-            //         return createErrorResponse(ERROR_MESSAGES.NULL_CLIENT_EMAIL(clientEmail));
+            //         return responseHandler.createErrorResponse(responseHandler.ERROR_MESSAGES.NULL_CLIENT_EMAIL(clientEmail));
             //     }
             //     actionResult = await handleVpnConfig(clientName, clientEmail);
             //     break;
-
+            
             case ACTIONS.MAIL:
                 if (!clientEmail) {
-                    return createErrorResponse(ERROR_MESSAGES.NULL_CLIENT_EMAIL(clientEmail));
+                    return responseHandler.createErrorResponse(responseHandler.ERROR_MESSAGES.NULL_CLIENT_EMAIL(clientEmail));
                 }
-                actionResult = await sendClientCredentials(clientName, clientEmail);
+
+                await s3Handler.downloadEasyRSAConfig(easyRsaBucketRegion, easyRsaBucketName, easyRsaBucketPath, easyRsaPkiDir, easyRSALocalTmpFolder);
+                localPkiDirPath = path.join(easyRSALocalTmpFolder, easyRsaPkiDir)
+
+                actionResult = await sendClientCredentials(clientName, clientEmail, easyRSABinPath, localPkiDirPath);
                 console.log(`Client credentials dispatch procedure successfully completed`);
                 break;
 
             case ACTIONS.CREATE:
                 if (!clientEmail) {
-                    return createErrorResponse(ERROR_MESSAGES.NULL_CLIENT_EMAIL(clientEmail));
+                    return responseHandler.createErrorResponse(responseHandler.ERROR_MESSAGES.NULL_CLIENT_EMAIL(clientEmail));
                 }
-                actionResult = await handleCreateClient(clientName, clientEmail, defaultCredentialsDurationDays);
+                
+                await s3Handler.downloadEasyRSAConfig(easyRsaBucketRegion, easyRsaBucketName, easyRsaBucketPath, easyRsaPkiDir, easyRSALocalTmpFolder);
+                localPkiDirPath = path.join(easyRSALocalTmpFolder, easyRsaPkiDir)
+                
+                //TODO scorporare invio mail
+                actionResult = await handleCreateClient(clientName, clientEmail, easyRSABinPath, localPkiDirPath, defaultCredentialsDurationDays);
+                
+                await s3Handler.uploadEasyRSAConfig(easyRsaBucketRegion, easyRsaBucketName, easyRsaBucketPath, easyRsaPkiDir, easyRSALocalTmpFolder);
                 console.log(`Client create procedure successfully completed`);
                 break;
 
             case ACTIONS.REVOKE:
-                actionResult = await handleRevokeClient(clientName);
+                await s3Handler.downloadEasyRSAConfig(easyRsaBucketRegion, easyRsaBucketName, easyRsaBucketPath, easyRsaPkiDir, easyRSALocalTmpFolder);    
+            
+                actionResult = await handleRevokeClient(clientName, easyRSALocalTmpFolder, easyRsaPkiDir);
+
+                await s3Handler.uploadEasyRSAConfig(easyRsaBucketRegion, easyRsaBucketName, easyRsaBucketPath, easyRsaPkiDir, easyRSALocalTmpFolder);
                 console.log(`Client revoke procedure successfully completed`);
                 break;
 
             default:
-                return createErrorResponse(`Error evaluating action ${action}`);
+                return responseHandler.createErrorResponse(`Error evaluating action ${action}`);
         }
 
-        return createSuccessResponse(actionResult);
+        return responseHandler.createSuccessResponse(actionResult);
     } catch (error) {
         console.error(`${action} action error:`, error);
-        return createErrorResponse(`${action} action error`, error.message);
+        return responseHandler.createErrorResponse(`${action} action error`, error.message);
     }
 }
 
@@ -85,9 +106,9 @@ exports.handler = async function (event) {
 //     );
 // };
 
-const handleCreateClient = async (clientName, clientEmail, defaultCredentialsDurationDays) => {
-    const createClientResult = await easyRsaHandler.createClient(clientName, clientEmail, defaultCredentialsDurationDays);
-    const sendResult = await sendClientCredentials(clientName, clientEmail);
+const handleCreateClient = async (clientName, clientEmail, easyRsaPath, easyRsaPkiDir, defaultCredentialsDurationDays) => {
+    const createClientResult = await easyRsaHandler.createClient(clientName, clientEmail, easyRsaPath, easyRsaPkiDir, defaultCredentialsDurationDays);
+    const sendResult = await sendClientCredentials(clientName, clientEmail, easyRsaPkiDir);
 
     return { 
         ...createClientResult, 
@@ -95,8 +116,8 @@ const handleCreateClient = async (clientName, clientEmail, defaultCredentialsDur
     };
 };
 
-const handleRevokeClient = async (clientName) => {
-    const actionResult = await easyRsaHandler.revokeClient(clientName);
+const handleRevokeClient = async (clientName, easyRsaPath, easyRsaPkiDir) => {
+    const actionResult = await easyRsaHandler.revokeClient(clientName, easyRsaPath, easyRsaPkiDir);
     const {
         VPN_ENDPOINT_REGION: vpnEpRegion,
         VPN_ENDPOINT_ID: vpnEpId,
@@ -115,7 +136,7 @@ const handleRevokeClient = async (clientName) => {
     };
 };
 
-async function sendClientCredentials(clientName, clientEmail) {
+async function sendClientCredentials(clientName, clientEmail, easyRsaPkiDir) {
     const {
         VPN_ENDPOINT_REGION: vpnEpRegion,
         VPN_ENDPOINT_ID: vpnClientEndpointId,
@@ -137,30 +158,12 @@ async function sendClientCredentials(clientName, clientEmail) {
         { vpnClientRegion: vpnEpRegion, vpnEndpointId: vpnClientEndpointId }, 
         { mailTemplateBucketName: mailTemplateBucketName, mailTemplateBucketKey: mailTemplateBucketKey, mailTemplateBucketRegion: mailTemplateBucketRegion },
         { fromName: vpnSesSenderName, fromAddress: vpnSesSender, toAddress: clientEmail, subject: clientCredentialsMailSubject }, 
-        { clientName: clientName });
+        { clientName: clientName },
+        { easyRsaPkiDir: easyRsaPkiDir});
 
     return results;
 }
 
 const isValidAction = (action) => {
     return action && Object.keys(ACTIONS).includes(action);
-}
-
-const createErrorResponse = (message, error = null) => {
-    console.error(message);
-
-    return {
-        statusCode: 500,
-        body: JSON.stringify({
-            message,
-            error
-        })
-    };
-}
-
-const createSuccessResponse = (result) => {
-    return {
-        statusCode: 200,
-        body: JSON.stringify(result)
-    };
 }

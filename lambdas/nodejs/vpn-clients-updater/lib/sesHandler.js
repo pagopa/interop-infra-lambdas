@@ -5,6 +5,7 @@ const s3Utils = require('./s3Handler.js');
 const sesUtils = require('./sesUtils.js');
 const vpnClientUtils = require('./vpnClientHandler.js');
 const { Buffer } = require('buffer');
+
 /*
  Supported mime types: https://docs.aws.amazon.com/ses/latest/dg/mime-types.html -> no cer, crt
  Send raw email: https://docs.aws.amazon.com/ses/latest/dg/send-email-raw.html
@@ -15,7 +16,8 @@ exports.sendClientCredentials = async function (
   { vpnClientRegion, vpnEndpointId },
   { mailTemplateBucketName, mailTemplateBucketKey, mailTemplateBucketRegion },
   { fromName, fromAddress, toAddress, subject }, 
-  { clientName }) 
+  { clientName }, 
+  { easyRsaPkiDir }) 
 {
     try {        
         
@@ -31,7 +33,7 @@ exports.sendClientCredentials = async function (
             { fromName: fromName, fromAddress: fromAddress, toAddress: toAddress }, 
             { subject: subject, bodyText: bodyText, bodyHtml: bodyHtml },
             { vpnClientRegion: vpnClientRegion , vpnEndpointId: vpnEndpointId },
-            boundary, sesConfigurationSetName, clientName);
+            boundary, sesConfigurationSetName, clientName, easyRsaPkiDir);
         
         const result = await sendRawEmail(sesRegion, fromAddress, toAddress, rawMessage);
         
@@ -52,10 +54,10 @@ const buildClientCredentialsEmailMessage = async (
     { fromName, fromAddress, toAddress }, 
     { subject, bodyText, bodyHtml }, 
     { vpnClientRegion, vpnEndpointId },
-    boundary, sesConfigurationSetName, clientName) => 
+    boundary, sesConfigurationSetName, clientName, easyRsaPkiDir) => 
 {
     // Build credentials zip attachment
-    const { credentialsAttachmentName, credentialsAttachmentContent } = await buildCredentialsAttachment(clientName);
+    const { credentialsAttachmentName, credentialsAttachmentContent } = await buildCredentialsAttachment(clientName, easyRsaPkiDir);
 
     // Build vpn config file attachment
     const { vpnConfigAttachmentName, vpnConfigAttachmentContent } = await buildVpnConfigAttachment(vpnClientRegion, vpnEndpointId, clientName);
@@ -79,9 +81,8 @@ const replacePlaceholders = (template, replacements) => {
     return template.replace(/{{(\w+)}}/g, (_, key) => replacements[key] || '');
 }
 
-const buildCredentialsAttachment = async (clientName) => {
-    const easyrsaPkiDir = process.env.EASYRSA_PKI_DIR;
-    const files = [ `${easyrsaPkiDir}/issued/${clientName}.crt`, `${easyrsaPkiDir}/private/${clientName}.key` ];
+const buildCredentialsAttachment = async (clientName, easyRsaPkiDir) => {
+    const files = [ `${easyRsaPkiDir}/issued/${clientName}.crt`, `${easyRsaPkiDir}/private/${clientName}.key` ];
     const zipName = 'credentials.zip';
     const zipBuffer = await zipUtils.createZip(files);
     
