@@ -9,7 +9,8 @@ const runCommand = async (command, args = []) => {
     //const envVars = `EASYRSA_PATH=${process.env.EASYRSA_PATH} EASYRSA_PKI_DIR=${process.env.EASYRSA_PKI_DIR}`;
     //const cmd = `${envVars} ${scriptPath} ${command} ${args.join(' ')}`;
     const cmd = `${scriptPath} ${command} ${args.join(' ')}`;
-    
+    console.log(`Execute command: ${cmd}`);
+
     exec(cmd, (error, stdout, stderr) => {
       if (error) {
         reject(`exec error: ${error}`);
@@ -26,7 +27,7 @@ const runCommand = async (command, args = []) => {
 };
 
 module.exports = {
-  createClient: (clientName, clientEmail, defaultCredentialsDurationDays, easyRsaPath, easyRsaPkiDir) => runCommand('create-client', [clientName, clientEmail, defaultCredentialsDurationDays, easyRsaPath, easyRsaPkiDir]),
+  createClient: (clientName, clientEmail, easyRsaPath, easyRsaPkiDir, defaultCredentialsDurationDays) => runCommand('create-client', [clientName, clientEmail, easyRsaPath, easyRsaPkiDir, defaultCredentialsDurationDays]),
   isValidClient: (clientName, easyRsaPath, easyRsaPkiDir) => runCommand('is-valid-client', [clientName, easyRsaPath, easyRsaPkiDir]),
   isRevokedClient: (clientName, easyRsaPath, easyRsaPkiDir) => runCommand('is-revoked-client', [clientName, easyRsaPath, easyRsaPkiDir]),
   listValidClients: (easyRsaPath, easyRsaPkiDir) => runCommand('list-valid-clients', [easyRsaPath, easyRsaPkiDir]),

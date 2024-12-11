@@ -20,7 +20,7 @@ fi
 
 set +e
 ## Verifica se un certificato esiste
-$EASYRSA_PATH --pki-dir=$EASYRSA_PKI_DIR show-cert $CLIENT_NAME &> $EASYRSA_PKI_DIR/tmp.txt
+$EASYRSA_PATH/easyrsa --pki-dir=$EASYRSA_PKI_DIR show-cert $CLIENT_NAME &> $EASYRSA_PKI_DIR/tmp.txt
 RESULT=$?
 set -e
 
