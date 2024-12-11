@@ -28,7 +28,7 @@ async function downloadEasyRSAConfig (bucketRegion, bucketName, easyRsaBucketPat
     try {
         s3Client = getS3Client(bucketRegion);
     } catch (error) {
-        return { message: `${responseHandler.ERROR_MESSAGES.S3_CLIENT_ERROR}::${error.message}`, error: error };
+        return { message: `${responseHandler.ERROR_MESSAGES.S3_CLIENT_ERROR()}::${error.message}`, error: error };
     }
 
     // Create tmp folder to store easyrsa contents
@@ -120,7 +120,7 @@ async function uploadEasyRSAConfig (bucketRegion, bucketName, easyRsaBucketPath,
     try {
         s3Client = getS3Client(bucketRegion);
     } catch (error) {
-        return { message: `${responseHandler.ERROR_MESSAGES.S3_CLIENT_ERROR}::${error.message}`, error: error };
+        return { message: `${responseHandler.ERROR_MESSAGES.S3_CLIENT_ERROR()}::${error.message}`, error: error };
     }
 
     const normalizedPkiDir = easyRsaPkiDir.endsWith('/') ? easyRsaPkiDir : `${easyRsaPkiDir}/`;
