@@ -142,7 +142,9 @@ async function uploadEasyRSAConfig (bucketRegion, bucketName, easyRsaBucketPath,
             if (file.isDirectory()) {
                 filePaths = filePaths.concat(walkDir(fullPath)); // Recurse into subdirectory
             } else {
-                filePaths.push(fullPath); // Add file path
+                if (fullPath.indexOf('ca.crt') < 0 && fullPath.indexOf('ca.key') < 0) {
+                    filePaths.push(fullPath); // Add file path
+                }
             }
         }
         return filePaths;
@@ -158,8 +160,6 @@ async function uploadEasyRSAConfig (bucketRegion, bucketName, easyRsaBucketPath,
         try {
             console.log(`Uploading: ${filePath} to ${bucketName}/${s3Key}`);
             const fileContent = fs.readFileSync(filePath);
-
-            // Upload the file
             const putObjectCommand = new PutObjectCommand({
                 Bucket: bucketName,
                 Key: s3Key,
