@@ -21,10 +21,10 @@ const createErrorResponse = (message, error = null) => {
     };
 }
 
-const createSuccessResponse = (result) => {
+const createSuccessResponse = (body) => {
     return {
         statusCode: 200,
-        body: JSON.stringify(result)
+        body: body
     };
 }
 
