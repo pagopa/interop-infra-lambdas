@@ -1,8 +1,8 @@
 const scriptsWrapper = require('./scriptsWrapper');
 
-exports.createClient = async function (clientName, clientEmail, easyRsaPath, easyRsaPkiDir) {
+exports.createClient = async function (clientName, clientEmail, easyRsaPath, easyRsaPkiDir, credentialsDurationDays) {
     try {
-        const createClientResult = await scriptsWrapper.createClient(clientName, clientEmail, easyRsaPath, easyRsaPkiDir);
+        const createClientResult = await scriptsWrapper.createClient(clientName, clientEmail, easyRsaPath, easyRsaPkiDir, credentialsDurationDays);
         const isValidClientResult = await scriptsWrapper.isValidClient(clientName, easyRsaPath, easyRsaPkiDir);
 
         return {

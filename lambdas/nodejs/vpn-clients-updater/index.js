@@ -26,7 +26,7 @@ exports.handler = async function (event) {
         EASYRSA_BUCKET_NAME: easyRsaBucketName,
         EASYRSA_BUCKET_REGION: easyRsaBucketRegion,
         EASYRSA_PATH: easyRsaBucketPath,
-        EASYRSA_PKI_DIR: easyRsaPkiDir 
+        EASYRSA_PKI_DIR: easyRsaPkiDir
     } = process.env;    
 
     try {
@@ -43,7 +43,7 @@ exports.handler = async function (event) {
             //     actionResult = await handleVpnConfig(clientName, clientEmail);
             //     break;
             
-            case ACTIONS.MAIL:
+            case ACTIONS.MAIL: {
                 if (!clientEmail) {
                     return responseHandler.createErrorResponse(responseHandler.ERROR_MESSAGES.NULL_CLIENT_EMAIL(clientEmail));
                 }
@@ -54,23 +54,29 @@ exports.handler = async function (event) {
                 actionResult = await sendClientCredentials(clientName, clientEmail, easyRSABinPath, localPkiDirPath);
                 console.log(`Client credentials dispatch procedure successfully completed`);
                 break;
-
-            case ACTIONS.CREATE:
+            }
+            case ACTIONS.CREATE: {
                 if (!clientEmail) {
                     return responseHandler.createErrorResponse(responseHandler.ERROR_MESSAGES.NULL_CLIENT_EMAIL(clientEmail));
                 }
                 
                 await s3Handler.downloadEasyRSAConfig(easyRsaBucketRegion, easyRsaBucketName, easyRsaBucketPath, easyRsaPkiDir, easyRSALocalTmpFolder);
-                localPkiDirPath = path.join(easyRSALocalTmpFolder, easyRsaPkiDir)
+                localPkiDirPath = path.join(easyRSALocalTmpFolder, easyRsaPkiDir);
                 
-                //TODO scorporare invio mail
-                actionResult = await handleCreateClient(clientName, clientEmail, easyRSABinPath, localPkiDirPath, defaultCredentialsDurationDays);
+                let createClientResult = await easyRsaHandler.createClient(clientName, clientEmail, easyRSABinPath, localPkiDirPath, defaultCredentialsDurationDays);
                 
                 await s3Handler.uploadEasyRSAConfig(easyRsaBucketRegion, easyRsaBucketName, easyRsaBucketPath, easyRsaPkiDir, easyRSALocalTmpFolder);
+
+                let sendResult = await sendClientCredentials(clientName, clientEmail, localPkiDirPath);
+
+                actionResult = {
+                    ...createClientResult, 
+                    sendClientCredentialsResult: sendResult 
+                }
                 console.log(`Client create procedure successfully completed`);
                 break;
-
-            case ACTIONS.REVOKE:
+            }
+            case ACTIONS.REVOKE: {
                 await s3Handler.downloadEasyRSAConfig(easyRsaBucketRegion, easyRsaBucketName, easyRsaBucketPath, easyRsaPkiDir, easyRSALocalTmpFolder);    
             
                 actionResult = await handleRevokeClient(clientName, easyRSALocalTmpFolder, easyRsaPkiDir);
@@ -78,7 +84,7 @@ exports.handler = async function (event) {
                 await s3Handler.uploadEasyRSAConfig(easyRsaBucketRegion, easyRsaBucketName, easyRsaBucketPath, easyRsaPkiDir, easyRSALocalTmpFolder);
                 console.log(`Client revoke procedure successfully completed`);
                 break;
-
+            }
             default:
                 return responseHandler.createErrorResponse(`Error evaluating action ${action}`);
         }
@@ -106,15 +112,6 @@ exports.handler = async function (event) {
 //     );
 // };
 
-const handleCreateClient = async (clientName, clientEmail, easyRsaPath, easyRsaPkiDir, defaultCredentialsDurationDays) => {
-    const createClientResult = await easyRsaHandler.createClient(clientName, clientEmail, easyRsaPath, easyRsaPkiDir, defaultCredentialsDurationDays);
-    const sendResult = await sendClientCredentials(clientName, clientEmail, easyRsaPkiDir);
-
-    return { 
-        ...createClientResult, 
-        sendClientCredentialsResult: sendResult 
-    };
-};
 
 const handleRevokeClient = async (clientName, easyRsaPath, easyRsaPkiDir) => {
     const actionResult = await easyRsaHandler.revokeClient(clientName, easyRsaPath, easyRsaPkiDir);

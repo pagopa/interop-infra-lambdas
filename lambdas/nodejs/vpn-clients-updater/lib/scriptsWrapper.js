@@ -27,7 +27,7 @@ const runCommand = async (command, args = []) => {
 };
 
 module.exports = {
-  createClient: (clientName, clientEmail, easyRsaPath, easyRsaPkiDir, defaultCredentialsDurationDays) => runCommand('create-client', [clientName, clientEmail, easyRsaPath, easyRsaPkiDir, defaultCredentialsDurationDays]),
+  createClient: (clientName, clientEmail, easyRsaPath, easyRsaPkiDir, credentialsDurationDays) => runCommand('create-client', [clientName, clientEmail, easyRsaPath, easyRsaPkiDir, credentialsDurationDays]),
   isValidClient: (clientName, easyRsaPath, easyRsaPkiDir) => runCommand('is-valid-client', [clientName, easyRsaPath, easyRsaPkiDir]),
   isRevokedClient: (clientName, easyRsaPath, easyRsaPkiDir) => runCommand('is-revoked-client', [clientName, easyRsaPath, easyRsaPkiDir]),
   listValidClients: (easyRsaPath, easyRsaPkiDir) => runCommand('list-valid-clients', [easyRsaPath, easyRsaPkiDir]),
