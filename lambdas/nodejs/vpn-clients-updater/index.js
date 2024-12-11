@@ -79,7 +79,8 @@ exports.handler = async function (event) {
             case ACTIONS.REVOKE: {
                 await s3Handler.downloadEasyRSAConfig(easyRsaBucketRegion, easyRsaBucketName, easyRsaBucketPath, easyRsaPkiDir, easyRSALocalTmpFolder);    
             
-                actionResult = await handleRevokeClient(clientName, easyRSALocalTmpFolder, easyRsaPkiDir);
+                localPkiDirPath = path.join(easyRSALocalTmpFolder, easyRsaPkiDir);
+                actionResult = await handleRevokeClient(clientName, easyRSABinPath, localPkiDirPath);
 
                 await s3Handler.uploadEasyRSAConfig(easyRsaBucketRegion, easyRsaBucketName, easyRsaBucketPath, easyRsaPkiDir, easyRSALocalTmpFolder);
                 console.log(`Client revoke procedure successfully completed`);
@@ -117,9 +118,9 @@ const handleRevokeClient = async (clientName, easyRsaPath, easyRsaPkiDir) => {
     const actionResult = await easyRsaHandler.revokeClient(clientName, easyRsaPath, easyRsaPkiDir);
     const {
         VPN_ENDPOINT_REGION: vpnEpRegion,
-        VPN_ENDPOINT_ID: vpnEpId,
-        EASYRSA_PKI_DIR: crlFilePath
+        VPN_ENDPOINT_ID: vpnEpId
     } = process.env;
+    const crlFilePath = easyRsaPkiDir
     const crlFileName = "crl.pem";
 
     const crlUpdateResult = await vpnClientHandler.updateVpnEndpointCRL(vpnEpRegion, vpnEpId, crlFilePath, crlFileName);
