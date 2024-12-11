@@ -80,9 +80,30 @@ exports.handler = async function (event) {
                 await s3Handler.downloadEasyRSAConfig(easyRsaBucketRegion, easyRsaBucketName, easyRsaBucketPath, easyRsaPkiDir, easyRSALocalTmpFolder);    
             
                 localPkiDirPath = path.join(easyRSALocalTmpFolder, easyRsaPkiDir);
-                actionResult = await handleRevokeClient(clientName, easyRSABinPath, localPkiDirPath);
+
+                // Revoke certificate through easyrsa
+                const revokeResult = await easyRsaHandler.revokeClient(clientName, easyRSABinPath, localPkiDirPath);
 
                 await s3Handler.uploadEasyRSAConfig(easyRsaBucketRegion, easyRsaBucketName, easyRsaBucketPath, easyRsaPkiDir, easyRSALocalTmpFolder);
+
+                // Update remote crl.pem file on vpn endpoint
+                const {
+                    VPN_ENDPOINT_REGION: vpnEpRegion,
+                    VPN_ENDPOINT_ID: vpnEpId
+                } = process.env;
+                const crlFilePath = localPkiDirPath;
+                const crlFileName = "crl.pem";
+            
+                const crlUpdateResult = await vpnClientHandler.updateVpnEndpointCRL(vpnEpRegion, vpnEpId, crlFilePath, crlFileName);
+                if (!crlUpdateResult) {
+                    throw new Error(`VPN Endpoint CRL import procedure failed ${JSON.stringify(actionResult)}`);
+                }
+
+                actionResult = { 
+                    ...revokeResult, 
+                    crlUpdateResult 
+                }
+
                 console.log(`Client revoke procedure successfully completed`);
                 break;
             }
