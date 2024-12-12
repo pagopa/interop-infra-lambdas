@@ -121,7 +121,7 @@ exports.handler = async function (event) {
                 return responseHandler.createErrorResponse(`Error evaluating action ${action}`);
         }
 
-        logger.debug(`Lambda execution completed with output: ${JSON.stringify(actionResult)}`)
+        logger.info(`Lambda execution completed with output: ${JSON.stringify(actionResult)}`)
         return responseHandler.createSuccessResponse(actionResult);
     } catch (error) {
         logger.error(`${action} action error:`, error);

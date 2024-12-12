@@ -9,7 +9,7 @@ const { Buffer } = require('buffer');
 
 const logger = new CustomLogger(process.env.LOG_LEVEL || "info");
 
-const getSESClient = (region) => new SESClient({ region, logger: logger });
+const getSESClient = (region) => new SESClient({ region });
 
 /*
  Supported mime types: https://docs.aws.amazon.com/ses/latest/dg/mime-types.html -> no cer, crt

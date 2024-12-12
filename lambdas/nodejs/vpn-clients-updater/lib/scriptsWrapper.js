@@ -23,7 +23,7 @@ const runCommand = async (command, args = []) => {
         return;
       }
 
-      resolve(stdout);
+      resolve(stdout || true);
     });
   });
 };
