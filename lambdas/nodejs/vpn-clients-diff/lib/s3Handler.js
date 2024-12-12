@@ -40,9 +40,10 @@ async function downloadEasyRSAConfig (bucketRegion, bucketName, easyRsaBucketPat
     // List all objects in the specified easyrsa folder
     let isTruncated = true;
     let continuationToken = null;
+    let pkiDirFullPath = `${easyRsaBucketPath}/${normalizedPkiDir}`
     let listObjectsV2CommandInput = {
         Bucket: bucketName,
-        Prefix: `${easyRsaBucketPath}/${normalizedPkiDir}`,
+        Prefix: pkiDirFullPath,
         MaxKeys: 1,  // Check for at least one object
         ContinuationToken: continuationToken
     }
@@ -57,10 +58,10 @@ async function downloadEasyRSAConfig (bucketRegion, bucketName, easyRsaBucketPat
         
         if (!continuationToken) {
             if (easyRsaData.Contents && easyRsaData.Contents.length > 0) {
-                console.log(`Pki directory DIR "${normalizedPkiDir}" exists in the bucket "${bucketName}"`);
+                console.log(`Pki directory DIR "${pkiDirFullPath}" exists in the bucket "${bucketName}"`);
             } else {
-                console.log(`Pki directory DIR "${normalizedPkiDir}" does not exist in the bucket "${bucketName}"`);
-                return { message: responseHandler.ERROR_MESSAGES.S3_CONTENT_NOT_FOUND(normalizedPkiDir) };
+                console.log(`Pki directory DIR "${pkiDirFullPath}" does not exist in the bucket "${bucketName}"`);
+                throw Error(responseHandler.ERROR_MESSAGES.S3_CONTENT_NOT_FOUND(pkiDirFullPath));
             }
         }
         

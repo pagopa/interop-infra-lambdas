@@ -40,11 +40,12 @@ async function downloadEasyRSAConfig (bucketRegion, bucketName, easyRsaBucketPat
     const normalizedPkiDir = easyRsaPkiDir.endsWith('/') ? easyRsaPkiDir : `${easyRsaPkiDir}/`;
 
     // List all objects in the specified easyrsa folder
+    let pkiDirFullPath = `${easyRsaBucketPath}/${normalizedPkiDir}`;
     let isTruncated = true;
     let continuationToken = null;
     let listObjectsV2CommandInput = {
         Bucket: bucketName,
-        Prefix: `${easyRsaBucketPath}/${normalizedPkiDir}`,
+        Prefix: pkiDirFullPath,
         MaxKeys: 1,  // Check for at least one object
         ContinuationToken: continuationToken
     }
@@ -59,10 +60,10 @@ async function downloadEasyRSAConfig (bucketRegion, bucketName, easyRsaBucketPat
         
         if (!continuationToken) {
             if (easyRsaData.Contents && easyRsaData.Contents.length > 0) {
-                console.log(`Pki directory DIR "${normalizedPkiDir}" exists in the bucket "${bucketName}"`);
+                console.log(`Pki directory DIR "${pkiDirFullPath}" exists in the bucket "${bucketName}"`);
             } else {
-                console.log(`Pki directory DIR "${normalizedPkiDir}" does not exist in the bucket "${bucketName}"`);
-                return { message: responseHandler.ERROR_MESSAGES.S3_CONTENT_NOT_FOUND(normalizedPkiDir) };
+                console.log(`Pki directory DIR "${pkiDirFullPath}" does not exist in the bucket "${bucketName}"`);
+                throw Error(responseHandler.ERROR_MESSAGES.S3_CONTENT_NOT_FOUND(pkiDirFullPath));
             }
         }
         
@@ -130,7 +131,7 @@ async function uploadEasyRSAConfig (bucketRegion, bucketName, easyRsaBucketPath,
     // Check if the local directory exists
     if (!fs.existsSync(localDirPath)) {
         console.error(`EasyRsa local directory does not exist: ${localDirPath}`);
-        return { message: `${responseHandler.ERROR_MESSAGES.LOCAL_CONTENT_NOT_FOUND(localDirPath)}`};
+        throw Error(responseHandler.ERROR_MESSAGES.S3_CONTENT_NOT_FOUND(normalizedPkiDir));
     }
 
     // Recursively read all files and folders in the local directory
