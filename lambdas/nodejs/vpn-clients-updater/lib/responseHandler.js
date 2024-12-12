@@ -6,6 +6,7 @@ const ERROR_MESSAGES = {
     LOCAL_CONTENT_NOT_FOUND: (expectedContent) => `${expectedContent} not found on local filesystem`,
     S3_CLIENT_ERROR: () => `Error creating S3 client`,
     S3_DOWNLOAD_ERROR: () => `Error downloading S3 file`,
+    S3_UPLOAD_ERROR: () => `Error uploading S3 file`,
     S3_PARSING_ERROR: () => `Error parsing S3 file`,
     S3_PROCESSING_ERROR: () => `Error reading JSON file`,
     S3_CONTENT_NOT_FOUND: (expectedContent) => `Error downloading ${expectedContent} from S3 bucket`

@@ -3,7 +3,10 @@ const sesHandler       = require('./lib/sesHandler.js');
 const vpnClientHandler = require('./lib/vpnClientHandler.js');
 const s3Handler        = require('./lib/s3Handler.js');
 const responseHandler  = require('./lib/responseHandler.js');
+const CustomLogger     = require('./lib/logger.js');
 const path             = require('path');
+
+const logger  = new CustomLogger(process.env.LOG_LEVEL || "info");
 const ACTIONS = {
     CREATE: 'CREATE',
     REVOKE: 'REVOKE',
@@ -47,12 +50,16 @@ exports.handler = async function (event) {
                 if (!clientEmail) {
                     return responseHandler.createErrorResponse(responseHandler.ERROR_MESSAGES.NULL_CLIENT_EMAIL(clientEmail));
                 }
-
+                logger.info('[Start] EasyRSA config download');
                 await s3Handler.downloadEasyRSAConfig(easyRsaBucketRegion, easyRsaBucketName, easyRsaBucketPath, easyRsaPkiDir, easyRSALocalTmpFolder);
+                logger.info('[End] EasyRSA config download');
                 localPkiDirPath = path.join(easyRSALocalTmpFolder, easyRsaPkiDir)
-
+                
+                logger.info('[Start] Send client credentials');
                 actionResult = await sendClientCredentials(clientName, clientEmail, easyRSABinPath, localPkiDirPath);
-                console.log(`Client credentials dispatch procedure successfully completed`);
+                logger.info('[End] Send client credentials');
+
+                logger.info(`Client credentials dispatch procedure successfully completed. Result:${JSON.stringify(actionResult)}`);
                 break;
             }
             case ACTIONS.CREATE: {
@@ -73,7 +80,7 @@ exports.handler = async function (event) {
                     ...createClientResult, 
                     sendClientCredentialsResult: sendResult 
                 }
-                console.log(`Client create procedure successfully completed`);
+                logger.info(`Client create procedure successfully completed`);
                 break;
             }
             case ACTIONS.REVOKE: {
@@ -94,26 +101,30 @@ exports.handler = async function (event) {
                 const crlFilePath = localPkiDirPath;
                 const crlFileName = "crl.pem";
             
+                logger.info(`[Start] Update VPN Endpoint CRL`);
                 const crlUpdateResult = await vpnClientHandler.updateVpnEndpointCRL(vpnEpRegion, vpnEpId, crlFilePath, crlFileName);
                 if (!crlUpdateResult) {
+                    logger.error(`[End] Update VPN Endpoint CRL procedure got empty result`);
                     throw new Error(`VPN Endpoint CRL import procedure failed ${JSON.stringify(actionResult)}`);
                 }
+                logger.info(`[End] Update VPN Endpoint CRL`);
 
                 actionResult = { 
                     ...revokeResult, 
                     crlUpdateResult 
                 }
 
-                console.log(`Client revoke procedure successfully completed`);
+                logger.info(`Client revoke procedure successfully completed`);
                 break;
             }
             default:
                 return responseHandler.createErrorResponse(`Error evaluating action ${action}`);
         }
 
+        logger.debug(`Lambda execution completed with output: ${JSON.stringify(actionResult)}`)
         return responseHandler.createSuccessResponse(actionResult);
     } catch (error) {
-        console.error(`${action} action error:`, error);
+        logger.error(`${action} action error:`, error);
         return responseHandler.createErrorResponse(`${action} action error`, error.message);
     }
 }

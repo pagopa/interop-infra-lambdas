@@ -1,7 +1,9 @@
 
 const { exec } = require('child_process');
-const path = require('path');
+const path     = require('path');
+const CustomLogger = require('./logger.js');
 
+const logger     = new CustomLogger(process.env.LOG_LEVEL || "info");
 const scriptPath = path.join(__dirname, '../scripts/main.sh');
 
 const runCommand = async (command, args = []) => {
@@ -9,7 +11,7 @@ const runCommand = async (command, args = []) => {
     //const envVars = `EASYRSA_PATH=${process.env.EASYRSA_PATH} EASYRSA_PKI_DIR=${process.env.EASYRSA_PKI_DIR}`;
     //const cmd = `${envVars} ${scriptPath} ${command} ${args.join(' ')}`;
     const cmd = `${scriptPath} ${command} ${args.join(' ')}`;
-    console.log(`Execute command: ${cmd}`);
+    logger.info(`Execute command: ${cmd}`);
 
     exec(cmd, (error, stdout, stderr) => {
       if (error) {

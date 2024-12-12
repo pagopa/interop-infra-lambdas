@@ -1,10 +1,15 @@
 
 const { SESClient, SendRawEmailCommand } = require('@aws-sdk/client-ses');
 const zipUtils = require('./zipUtils.js');
-const s3Utils = require('./s3Handler.js');
+const s3Utils  = require('./s3Handler.js');
 const sesUtils = require('./sesUtils.js');
+const CustomLogger   = require('./logger.js');
 const vpnClientUtils = require('./vpnClientHandler.js');
 const { Buffer } = require('buffer');
+
+const logger = new CustomLogger(process.env.LOG_LEVEL || "info");
+
+const getSESClient = (region) => new SESClient({ region, logger: logger });
 
 /*
  Supported mime types: https://docs.aws.amazon.com/ses/latest/dg/mime-types.html -> no cer, crt
@@ -37,18 +42,15 @@ exports.sendClientCredentials = async function (
         
         const result = await sendRawEmail(sesRegion, fromAddress, toAddress, rawMessage);
         
-        console.log('VPN Client credentials sent successfully');
-        // console.log(JSON.stringify(rawMessage))
+        logger.info('VPN Client credentials sent successfully');
         return result;
 
     } catch (err) {
-        console.error(`Error while sending client ${clientName} certificate through AWS SES`, err);
+        logger.error(`Error while sending client ${clientName} certificate through AWS SES`, err);
         throw err;
     }
 }
 
-
-const getSESClient = (region) => new SESClient({ region });
 
 const buildClientCredentialsEmailMessage = async (
     { fromName, fromAddress, toAddress }, 
@@ -68,7 +70,6 @@ const buildClientCredentialsEmailMessage = async (
        ...sesUtils.buildRawMessageAttachment('x-openvpn-profile', vpnConfigAttachmentContent, vpnConfigAttachmentName, boundary, true)
      ].join('\r\n');
 };
-
 
 const sendRawEmail = async (sesRegion, fromAddress, toAddress, rawMessage) => {
     const sesClient = getSESClient(sesRegion);
