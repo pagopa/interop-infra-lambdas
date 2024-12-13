@@ -9,7 +9,8 @@ const logger = new CustomLogger(process.env.LOG_LEVEL || "info");
 function getS3Client (region) {
     return new S3Client({ 
         forcePathStyle: true, 
-        region: region
+        region: region,
+        logger: logger
     });
 }
 
