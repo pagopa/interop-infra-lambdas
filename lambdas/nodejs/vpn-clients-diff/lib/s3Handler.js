@@ -2,6 +2,7 @@ const { S3Client, GetObjectCommand, ListObjectsV2Command } = require('@aws-sdk/c
 const responseHandler = require('./responseHandler.js');
 const fs   = require('fs');
 const path = require('path');
+const logger = require('./winstonLogger.js');
 
 function getS3Client (region) {
     return new S3Client({ forcePathStyle: true, region: region });
@@ -15,7 +16,9 @@ async function downloadVPNClientsFile(bucketRegion, bucketName, fileKey) {
         Bucket: bucketName,
         Key: fileKey
     };
+    logger.info(`downloadVPNClientsFile::Start VPN Clients file download`);
     const getObjectCommandResponse = await s3Client.send(new GetObjectCommand(getObjectCommandInput));
+    logger.info(`downloadVPNClientsFile::End VPN Clients file download`);
 
     return await getObjectCommandResponse.Body.transformToString('utf-8');
 }
@@ -47,20 +50,16 @@ async function downloadEasyRSAConfig (bucketRegion, bucketName, easyRsaBucketPat
         MaxKeys: 1,  // Check for at least one object
         ContinuationToken: continuationToken
     }
-    
+    logger.info(`downloadEasyRSAConfig::Start EasyRSA configuration download`);
     while (isTruncated) {
         
         let easyRsaData = await s3Client.send(new ListObjectsV2Command(listObjectsV2CommandInput))
-        
-        isTruncated = easyRsaData.IsTruncated;
-        continuationToken = easyRsaData.NextContinuationToken;
-        listObjectsV2CommandInput.ContinuationToken = continuationToken;
-        
+      
         if (!continuationToken) {
             if (easyRsaData.Contents && easyRsaData.Contents.length > 0) {
-                console.log(`Pki directory DIR "${pkiDirFullPath}" exists in the bucket "${bucketName}"`);
+                console.log(`downloadEasyRSAConfig::Pki directory DIR "${pkiDirFullPath}" exists in the bucket "${bucketName}"`);
             } else {
-                console.log(`Pki directory DIR "${pkiDirFullPath}" does not exist in the bucket "${bucketName}"`);
+                console.log(`downloadEasyRSAConfig::Pki directory DIR "${pkiDirFullPath}" does not exist in the bucket "${bucketName}"`);
                 throw Error(responseHandler.ERROR_MESSAGES.S3_CONTENT_NOT_FOUND(pkiDirFullPath));
             }
         }
@@ -84,7 +83,7 @@ async function downloadEasyRSAConfig (bucketRegion, bucketName, easyRsaBucketPat
                 }
             }                
 
-            console.log(`Downloading: ${key} to ${localPkiDirPath}`);
+            logger.log(`downloadEasyRSAConfig::Downloading: ${key} to ${localPkiDirPath}`);
             let getCurrentObjectParams = { Bucket: bucketName, Key: key };
             let getCurrentObjectCommand = new GetObjectCommand(getCurrentObjectParams);
             let response = await s3Client.send(getCurrentObjectCommand);
@@ -94,7 +93,7 @@ async function downloadEasyRSAConfig (bucketRegion, bucketName, easyRsaBucketPat
             response.Body.on('data', (chunk) => fileStream.write(chunk));
             response.Body.on('end', () => fileStream.end());
             response.Body.on('error', (err) => {
-                console.error(`Error writing file: ${localPkiDirPath}`, err);
+                logger.error(`downloadEasyRSAConfig::Error writing file: ${localPkiDirPath}`, err);
                 throw err;
             });
 
@@ -105,12 +104,13 @@ async function downloadEasyRSAConfig (bucketRegion, bucketName, easyRsaBucketPat
             });
         }
 
-        // Check if there are more objects to fetch
+        // Check if there are more objects to fetch          
         isTruncated = easyRsaData.IsTruncated;
         continuationToken = easyRsaData.NextContinuationToken;
+        listObjectsV2CommandInput.ContinuationToken = continuationToken;
     }
 
-    console.log(`EasyRSA configuration downloaded to: ${easyRSALocalTmpFolder}`);
+    logger.info(`downloadEasyRSAConfig::End EasyRSA configuration downloaded in folder: ${easyRSALocalTmpFolder}`);
 }
 
 module.exports = {

@@ -1,6 +1,7 @@
 const wrapper         = require("./lib/scriptsWrapper.js");
 const s3Handler       = require("./lib/s3Handler.js");
 const responseHandler = require("./lib/responseHandler.js");
+const logger          = require('./lib/winstonLogger.js');
 
 exports.handler = async function () {
     const {
@@ -16,7 +17,9 @@ exports.handler = async function () {
     let s3fileContent;
 
     try {
+        logger.info('[Start] Download VPN Client file');
         s3fileContent = await s3Handler.downloadVPNClientsFile(s3Region, vpnClientsBucketName, vpnClientsKeyName);
+        logger.info('[End] Download VPN Client file');
     } catch (error) {
         return responseHandler.createErrorResponse(responseHandler.ERROR_MESSAGES.S3_DOWNLOAD_ERROR(), error);
     }
@@ -29,14 +32,18 @@ exports.handler = async function () {
 
     const easyRSALocalTmpFolder = "/tmp"
     try {
+        logger.info(`[Start] EasyRSA config download`);
         await s3Handler.downloadEasyRSAConfig(s3Region, easyRsaBucketName, easyRsaBucketPath, easyRsaPkiDir, easyRSALocalTmpFolder)
+        logger.info(`[End] EasyRSA config download`);
     } catch (error) {
         return responseHandler.createErrorResponse(responseHandler.ERROR_MESSAGES.S3_DOWNLOAD_ERROR(), error);
     }
     
     try {
         let validUsers = [];
+        logger.info(`[Start] EasyRSA list valid clients`);
         let result = await wrapper.listValidClients(easyRSALocalTmpFolder, easyRsaPkiDir);
+        logger.info(`[End] EasyRSA list valid clients`);
         
         if (result) {
             validUsers = result.replaceAll('\n','').replaceAll('\t','');
@@ -67,15 +74,14 @@ exports.handler = async function () {
                 create.push({...inputUser});
             }
         }
-
-        console.log(`Clients diff procedure successfully completed (# clients to create: ${create.length}, # clients to revoke ${revoke.length})`);
-
+        
         const lambdaOutput = {
             clients: {
                 create: create,
                 revoke: revoke
             }
         };
+        logger.log(`Clients diff procedure successfully completed (# clients to create: ${create.length}, # clients to revoke ${revoke.length}). Output`,lambdaOutput);
         
         return responseHandler.createSuccessResponse(lambdaOutput);
 
