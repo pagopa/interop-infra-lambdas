@@ -57,9 +57,9 @@ async function downloadEasyRSAConfig (bucketRegion, bucketName, easyRsaBucketPat
       
         if (!continuationToken) {
             if (easyRsaData.Contents && easyRsaData.Contents.length > 0) {
-                console.log(`downloadEasyRSAConfig::Pki directory DIR "${pkiDirFullPath}" exists in the bucket "${bucketName}"`);
+                logger.info(`downloadEasyRSAConfig::Pki directory DIR "${pkiDirFullPath}" exists in the bucket "${bucketName}"`);
             } else {
-                console.log(`downloadEasyRSAConfig::Pki directory DIR "${pkiDirFullPath}" does not exist in the bucket "${bucketName}"`);
+                logger.error(`downloadEasyRSAConfig::Pki directory DIR "${pkiDirFullPath}" does not exist in the bucket "${bucketName}"`);
                 throw Error(responseHandler.ERROR_MESSAGES.S3_CONTENT_NOT_FOUND(pkiDirFullPath));
             }
         }
@@ -83,7 +83,7 @@ async function downloadEasyRSAConfig (bucketRegion, bucketName, easyRsaBucketPat
                 }
             }                
 
-            logger.log(`downloadEasyRSAConfig::Downloading: ${key} to ${localPkiDirPath}`);
+            logger.info(`downloadEasyRSAConfig::Downloading: ${key} to ${localPkiDirPath}`);
             let getCurrentObjectParams = { Bucket: bucketName, Key: key };
             let getCurrentObjectCommand = new GetObjectCommand(getCurrentObjectParams);
             let response = await s3Client.send(getCurrentObjectCommand);

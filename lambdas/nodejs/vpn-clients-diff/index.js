@@ -81,7 +81,7 @@ exports.handler = async function () {
                 revoke: revoke
             }
         };
-        logger.log(`Clients diff procedure successfully completed (# clients to create: ${create.length}, # clients to revoke ${revoke.length}). Output`,lambdaOutput);
+        logger.info(`Clients diff procedure successfully completed (# clients to create: ${create.length}, # clients to revoke ${revoke.length}). Output`,lambdaOutput);
         
         return responseHandler.createSuccessResponse(lambdaOutput);
 

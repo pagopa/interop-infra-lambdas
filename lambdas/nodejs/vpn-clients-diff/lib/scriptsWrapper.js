@@ -9,7 +9,7 @@ const runCommand = async (command, args = []) => {
     //const envVars = `EASYRSA_PATH=${process.env.EASYRSA_PATH} EASYRSA_PKI_DIR=${process.env.EASYRSA_PKI_DIR}`;
     //const cmd = `${envVars} ${scriptPath} ${command} ${args.join(' ')}`;
     const cmd = `${scriptPath} ${command} ${args.join(' ')}`;
-    logger.log(`Execute command: ${cmd}`);
+    logger.info(`Execute command: ${cmd}`);
 
     exec(cmd, (error, stdout, stderr) => {
       if (error) {
