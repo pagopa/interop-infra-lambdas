@@ -84,14 +84,20 @@ exports.handler = async function (event) {
                 break;
             }
             case ACTIONS.REVOKE: {
+                logger.info(`[Start] Download EasyRSA config for client ${clientName}`);
                 await s3Handler.downloadEasyRSAConfig(easyRsaBucketRegion, easyRsaBucketName, easyRsaBucketPath, easyRsaPkiDir, easyRSALocalTmpFolder);    
+                logger.info(`[End] Download EasyRSA config for client ${clientName}`);
             
                 localPkiDirPath = path.join(easyRSALocalTmpFolder, easyRsaPkiDir);
 
                 // Revoke certificate through easyrsa
+                logger.info(`[Start] Revoke client ${clientName}`);
                 const revokeResult = await easyRsaHandler.revokeClient(clientName, easyRSABinPath, localPkiDirPath);
-
+                logger.info(`[End] Revoke client ${clientName}`);
+                
+                logger.info(`[Start] Upload EasyRSA config for client ${clientName}`);
                 await s3Handler.uploadEasyRSAConfig(easyRsaBucketRegion, easyRsaBucketName, easyRsaBucketPath, easyRsaPkiDir, easyRSALocalTmpFolder);
+                logger.info(`[End] Upload EasyRSA config for client ${clientName}`);
 
                 // Update remote crl.pem file on vpn endpoint
                 const {
@@ -101,13 +107,13 @@ exports.handler = async function (event) {
                 const crlFilePath = localPkiDirPath;
                 const crlFileName = "crl.pem";
             
-                logger.info(`[Start] Update VPN Endpoint CRL`);
+                logger.info(`[Start] Update VPN Endpoint CRL for client ${clientName}`);
                 const crlUpdateResult = await vpnClientHandler.updateVpnEndpointCRL(vpnEpRegion, vpnEpId, crlFilePath, crlFileName);
                 if (!crlUpdateResult) {
                     logger.error(`[End] Update VPN Endpoint CRL procedure got empty result`);
                     throw new Error(`VPN Endpoint CRL import procedure failed ${JSON.stringify(actionResult)}`);
                 }
-                logger.info(`[End] Update VPN Endpoint CRL`);
+                logger.info(`[End] Update VPN Endpoint CRL for client ${clientName}`);
 
                 actionResult = { 
                     ...revokeResult, 
