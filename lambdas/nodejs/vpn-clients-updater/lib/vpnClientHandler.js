@@ -1,17 +1,17 @@
 
 const { EC2Client, ImportClientVpnClientCertificateRevocationListCommand, ExportClientVpnClientConfigurationCommand, DescribeClientVpnEndpointsCommand } = require('@aws-sdk/client-ec2');
 const fs = require('fs');
-const CustomLogger = require('./logger.js');
+const logger = require('./winstonLogger.js');
 
-const logger = new CustomLogger(process.env.LOG_LEVEL || "info");
-
-const getEC2Client = (region) => new EC2Client({ region, logger: logger });
+const getEC2Client = (region) => new EC2Client({ region });
 
 exports.getClientVpnName = async function (vpnClientRegion, vpnEndpointId) {
     const ec2Client = getEC2Client(vpnClientRegion);
-
     const describeEndpointCommand = new DescribeClientVpnEndpointsCommand({ClientVpnEndpointIds:[vpnEndpointId] });
+    
+    logger.info(`getClientVpnName::Start DescribeClientVpnEndpointsCommand`);
     const describedEp = await ec2Client.send(describeEndpointCommand);
+    logger.info(`getClientVpnName::End DescribeClientVpnEndpointsCommand`);
 
     let foundEp = describedEp.ClientVpnEndpoints;
     if (foundEp && foundEp.length) {
@@ -33,9 +33,11 @@ exports.getClientVpnName = async function (vpnClientRegion, vpnEndpointId) {
 
 exports.getClientVpnConfiguration = async function (vpnClientRegion, vpnEndpointId, clientName) {
     const ec2Client = getEC2Client(vpnClientRegion);
-    
     const exportConfigurationCommand = new ExportClientVpnClientConfigurationCommand({ ClientVpnEndpointId: vpnEndpointId });
+    
+    logger.info(`getClientVpnConfiguration::Start ExportClientVpnClientConfigurationCommand`);
     const data = await ec2Client.send(exportConfigurationCommand);
+    logger.info(`getClientVpnConfiguration::End ExportClientVpnClientConfigurationCommand`);
     
     const sb = [];
     sb.push(`${data.ClientConfiguration}`);
@@ -53,7 +55,11 @@ exports.updateVpnEndpointCRL = async function (vpnEndpointRegion, vpnEndpointId,
             CertificateRevocationList: fs.readFileSync(`${crlFilePath}/${crlFileName}`)
         });
         
-        return await ec2Client.send(importCRLCommand);
+        logger.info(`updateVpnEndpointCRL::Start ImportClientVpnClientCertificateRevocationListCommand`);
+        const importCrlResult = await ec2Client.send(importCRLCommand);
+        logger.info(`updateVpnEndpointCRL::End ImportClientVpnClientCertificateRevocationListCommand`);
+
+        return importCrlResult;
 
     } catch (err) {
         logger.error(`Error while importing updated CRL on VPN Endpoint ${vpnEndpointId}::${JSON.stringify(err)}`);

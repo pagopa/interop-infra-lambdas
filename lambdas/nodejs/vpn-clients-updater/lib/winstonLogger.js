@@ -1,0 +1,19 @@
+const winston = require("winston");
+
+const logLevel = process.env.LOG_LEVEL || "info";
+
+const logger = winston.createLogger({
+    level: logLevel,
+    format: winston.format.combine(
+        winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }), // Timestamp for logs
+        winston.format.errors({ stack: true }), // Include stack trace for errors
+        winston.format.json() // Log in JSON format for structured logging
+    ),
+    transports: [
+        new winston.transports.Console(), // Log to console
+        new winston.transports.File({ filename: "logs/error.log", level: "error" }), // Log errors to a file
+        new winston.transports.File({ filename: "logs/combined.log" }) // Log all levels to a combined file
+    ],
+});
+
+module.exports = logger;

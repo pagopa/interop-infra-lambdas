@@ -1,7 +1,5 @@
 const scriptsWrapper = require('./scriptsWrapper');
-const CustomLogger   = require('./logger.js');
-
-const logger = new CustomLogger(process.env.LOG_LEVEL || "info");
+const logger         = require('./winstonLogger.js');
 
 exports.createClient = async function (clientName, clientEmail, easyRsaPath, easyRsaPkiDir, credentialsDurationDays) {
     try {
@@ -12,9 +10,9 @@ exports.createClient = async function (clientName, clientEmail, easyRsaPath, eas
             createResult: createClientResult,
             validityCheckResult: isValidClientResult
         };
-    } catch (err) {
-        logger.error(`createClient::Error while creating client credentials::${JSON.stringify(err)}`);
-        throw err;
+    } catch (error) {
+        logger.error(`createClient::Error while creating client credentials`, error);
+        throw error;
     }
 };
 
@@ -27,8 +25,8 @@ exports.revokeClient = async function (clientName, easyRsaPath, easyRsaPkiDir) {
             revokeResult: revokeClientResult,
             revokedCheckResult: isRevokedClientResult
         };
-    } catch (err) {
-        logger.error(`Error while revoking client credentials::${JSON.stringify(err)}`);
-        throw err;
+    } catch (error) {
+        logger.error(`Error while revoking client credentials`, error);
+        throw error;
     }
 };

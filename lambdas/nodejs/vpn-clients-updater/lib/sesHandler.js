@@ -3,11 +3,9 @@ const { SESClient, SendRawEmailCommand } = require('@aws-sdk/client-ses');
 const zipUtils = require('./zipUtils.js');
 const s3Utils  = require('./s3Handler.js');
 const sesUtils = require('./sesUtils.js');
-const CustomLogger   = require('./logger.js');
+const logger   = require('./winstonLogger.js');
 const vpnClientUtils = require('./vpnClientHandler.js');
 const { Buffer } = require('buffer');
-
-const logger = new CustomLogger(process.env.LOG_LEVEL || "info");
 
 const getSESClient = (region) => new SESClient({ region });
 
@@ -39,14 +37,15 @@ exports.sendClientCredentials = async function (
             { subject: subject, bodyText: bodyText, bodyHtml: bodyHtml },
             { vpnClientRegion: vpnClientRegion , vpnEndpointId: vpnEndpointId },
             boundary, sesConfigurationSetName, clientName, easyRsaPkiDir);
-        
+
+        logger.info('sendClientCredentials::Sending VPN Client credentials');
         const result = await sendRawEmail(sesRegion, fromAddress, toAddress, rawMessage);
+        logger.info('sendClientCredentials::VPN Client credentials sent successfully');
         
-        logger.info('VPN Client credentials sent successfully');
         return result;
 
     } catch (err) {
-        logger.error(`Error while sending client ${clientName} certificate through AWS SES`, err);
+        logger.error(`sendClientCredentials::Error while sending client ${clientName} certificate through AWS SES`, err);
         throw err;
     }
 }
@@ -98,7 +97,9 @@ const buildVpnConfigAttachment = async (vpnClientRegion, vpnEndpointId, clientNa
     if (!vpnFileName) {
         vpnFileName = 'vpn-config';
     }
+    logger.info(`buildVpnConfigAttachment::Start Client VPN configuration retrieve`)
     const vpnClientConfig = await vpnClientUtils.getClientVpnConfiguration(vpnClientRegion, vpnEndpointId, clientName);
+    logger.info(`buildVpnConfigAttachment::Client VPN configuration retrieved`)
     
     return {
         vpnConfigAttachmentName: `${vpnFileName}.ovpn`,

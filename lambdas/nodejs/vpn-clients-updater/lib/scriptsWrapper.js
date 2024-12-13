@@ -1,9 +1,8 @@
 
 const { exec } = require('child_process');
 const path     = require('path');
-const CustomLogger = require('./logger.js');
+const logger   = require('./winstonLogger.js');
 
-const logger     = new CustomLogger(process.env.LOG_LEVEL || "info");
 const scriptPath = path.join(__dirname, '../scripts/main.sh');
 
 const runCommand = async (command, args = []) => {

@@ -1,5 +1,7 @@
 const LOG_LEVELS = ["debug", "info", "warn", "error"]
 
+//TODO Winston
+
 class CustomLogger {
     
     constructor(logLevel = "info") {

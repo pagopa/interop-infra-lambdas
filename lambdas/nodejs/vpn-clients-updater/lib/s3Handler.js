@@ -2,15 +2,13 @@ const { S3Client, GetObjectCommand, ListObjectsV2Command, PutObjectCommand} = re
 const responseHandler = require('./responseHandler.js')
 const fs    = require('fs');
 const path  = require('path');
-const CustomLogger = require('./logger.js');
+const logger = require('./winstonLogger.js');
 
-const logger = new CustomLogger(process.env.LOG_LEVEL || "info");
 
 function getS3Client (region) {
     return new S3Client({ 
         forcePathStyle: true, 
-        region: region,
-        logger: logger
+        region: region
     });
 }
 
@@ -58,14 +56,10 @@ async function downloadEasyRSAConfig (bucketRegion, bucketName, easyRsaBucketPat
         ContinuationToken: continuationToken
     }
     
+    logger.info(`downloadEasyRSAConfig:: Start EasyRSA configuration download`);
     while (isTruncated) {
-        
         let easyRsaData = await s3Client.send(new ListObjectsV2Command(listObjectsV2CommandInput))
-        
-        isTruncated = easyRsaData.IsTruncated;
-        continuationToken = easyRsaData.NextContinuationToken;
-        listObjectsV2CommandInput.ContinuationToken = continuationToken;
-        
+                
         if (!continuationToken) {
             if (easyRsaData.Contents && easyRsaData.Contents.length > 0) {
                 logger.info(`Pki directory DIR "${pkiDirFullPath}" exists in the bucket "${bucketName}"`);
@@ -94,7 +88,7 @@ async function downloadEasyRSAConfig (bucketRegion, bucketName, easyRsaBucketPat
                 }
             }                
 
-            logger.info(`Downloading: ${key} to ${localPkiDirPath}`);
+            logger.info(`downloadEasyRSAConfig:: Downloading: ${key} to ${localPkiDirPath}`);
             let getCurrentObjectParams = { Bucket: bucketName, Key: key };
             let getCurrentObjectCommand = new GetObjectCommand(getCurrentObjectParams);
             let response = await s3Client.send(getCurrentObjectCommand);
@@ -104,7 +98,7 @@ async function downloadEasyRSAConfig (bucketRegion, bucketName, easyRsaBucketPat
             response.Body.on('data', (chunk) => fileStream.write(chunk));
             response.Body.on('end', () => fileStream.end());
             response.Body.on('error', (err) => {
-                logger.error(`Error writing file: ${localPkiDirPath}`, err);
+                logger.error(`downloadEasyRSAConfig::Error writing file: ${localPkiDirPath}`, err);
                 throw err;
             });
 
@@ -118,9 +112,10 @@ async function downloadEasyRSAConfig (bucketRegion, bucketName, easyRsaBucketPat
         // Check if there are more objects to fetch
         isTruncated = easyRsaData.IsTruncated;
         continuationToken = easyRsaData.NextContinuationToken;
+        listObjectsV2CommandInput.ContinuationToken = continuationToken;
     }
 
-    logger.info(`EasyRSA configuration downloaded to: ${easyRSALocalTmpFolder}`);
+    logger.info(`downloadEasyRSAConfig::EasyRSA configuration downloaded to: ${easyRSALocalTmpFolder}`);
 }
 
 async function uploadEasyRSAConfig (bucketRegion, bucketName, easyRsaBucketPath, easyRsaPkiDir, easyRSALocalTmpFolder) {
@@ -129,7 +124,8 @@ async function uploadEasyRSAConfig (bucketRegion, bucketName, easyRsaBucketPath,
     try {
         s3Client = getS3Client(bucketRegion);
     } catch (error) {
-       throw Error(`${responseHandler.ERROR_MESSAGES.S3_CLIENT_ERROR()}::${error.message}:: ${JSON.stringify(error)}`);
+       logger.error('uploadEasyRSAConfig::', error);
+       throw Error(`uploadEasyRSAConfig::${responseHandler.ERROR_MESSAGES.S3_CLIENT_ERROR()}::${error.message}:: ${JSON.stringify(error)}`);
     }
 
     const normalizedPkiDir = easyRsaPkiDir.endsWith('/') ? easyRsaPkiDir : `${easyRsaPkiDir}/`;
@@ -139,7 +135,7 @@ async function uploadEasyRSAConfig (bucketRegion, bucketName, easyRsaBucketPath,
     // Check if the local directory exists
     if (!fs.existsSync(localDirPath)) {
         const errorMsg = responseHandler.ERROR_MESSAGES.S3_CONTENT_NOT_FOUND(normalizedPkiDir);
-        logger.error(`EasyRsa local directory does not exist: ${localDirPath}::${errorMsg}`);
+        logger.error(`uploadEasyRSAConfig::EasyRsa local directory does not exist: ${localDirPath}::${errorMsg}`);
         throw Error(errorMsg);
     }
 
@@ -178,12 +174,12 @@ async function uploadEasyRSAConfig (bucketRegion, bucketName, easyRsaBucketPath,
             await s3Client.send(putObjectCommand);
         } catch (error) {
             const errorMsg = responseHandler.ERROR_MESSAGES.S3_UPLOAD_ERROR();
-            logger.error(`${errorMsg}::Error uploading file: ${filePath} to ${bucketName}/${s3Key}`);
-            throw Error(`${errorMsg}::File ${filePath}::${error.message}:: ${JSON.stringify(error)}`);
+            logger.error(`uploadEasyRSAConfig::${errorMsg}::Error uploading file: ${filePath} to ${bucketName}/${s3Key}`, error);
+            throw Error(`uploadEasyRSAConfig::${errorMsg}::File ${filePath}::${error.message}:: ${JSON.stringify(error)}`);
         }
     }
 
-    logger.info(`EasyRSA configuration uploaded to S3 bucket: ${bucketName}, path: ${normalizedBucketPath}${normalizedPkiDir}`);
+    logger.info(`uploadEasyRSAConfig:: EasyRSA configuration uploaded to S3 bucket: ${bucketName}, path: ${normalizedBucketPath}${normalizedPkiDir}`);
 }
 
 module.exports = {
