@@ -10,9 +10,7 @@ const logger = winston.createLogger({
         winston.format.json() // Log in JSON format for structured logging
     ),
     transports: [
-        new winston.transports.Console(), // Log to console
-        new winston.transports.File({ filename: "logs/error.log", level: "error" }), // Log errors to a file
-        new winston.transports.File({ filename: "logs/combined.log" }) // Log all levels to a combined file
+        new winston.transports.Console()
     ],
 });
 
