@@ -103,10 +103,6 @@ exports.handler = async function (event) {
                 const revokeResult = await easyRsaHandler.revokeClient(clientName, easyRSABinPath, localPkiDirPath);
                 logger.info(`[ACTIONS.REVOKE][End] Revoke client ${clientName}`);
                 
-                logger.info(`[ACTIONS.REVOKE][Start] Upload EasyRSA config for client ${clientName}`);
-                await s3Handler.uploadEasyRSAConfig(easyRsaBucketRegion, easyRsaBucketName, easyRsaBucketPath, easyRsaPkiDir, easyRSALocalTmpFolder);
-                logger.info(`[ACTIONS.REVOKE][End] Upload EasyRSA config for client ${clientName}`);
-
                 // Update remote crl.pem file on vpn endpoint
                 const {
                     VPN_ENDPOINT_REGION: vpnEpRegion,
@@ -122,6 +118,10 @@ exports.handler = async function (event) {
                     throw new Error(`VPN Endpoint CRL import procedure failed ${JSON.stringify(actionResult)}`);
                 }
                 logger.info(`[ACTIONS.REVOKE][End] Update VPN Endpoint CRL for client ${clientName}`);
+
+                logger.info(`[ACTIONS.REVOKE][Start] Upload EasyRSA config for client ${clientName}`);
+                await s3Handler.uploadEasyRSAConfig(easyRsaBucketRegion, easyRsaBucketName, easyRsaBucketPath, easyRsaPkiDir, easyRSALocalTmpFolder);
+                logger.info(`[ACTIONS.REVOKE][End] Upload EasyRSA config for client ${clientName}`);
 
                 actionResult = { 
                     ...revokeResult, 
