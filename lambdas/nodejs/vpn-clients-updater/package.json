@@ -16,7 +16,8 @@
     "@aws-sdk/client-s3": "^3.617.0",
     "@aws-sdk/client-ses": "^3.614.0",
     "archiver": "^7.0.1",
-    "jszip": "^3.10.1"
+    "jszip": "^3.10.1",
+    "winston": "^3.17.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.8.0",

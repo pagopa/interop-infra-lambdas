@@ -2,9 +2,9 @@
 #EASYRSA_PATH=/Users/manuelm/Documents/repo/PagoPA/ClientVPN/easy-rsa/easyrsa3 EASYRSA_PKI_DIR=/Users/manuelm/Documents/repo/PagoPA/ClientVPN/easyrsa3/pki-dir CLIENT_NAME=manuel.test6 EASYRSA_BATCH_MODE=1 CLIENT_EMAIL=prova@prova.com sh create_client.sh
 set -euo pipefail
 
-# Check EASYRSA_PATH is defined
+# Check EASYRSA_PATH is defined 
 if [ -z "$EASYRSA_PATH" ]; then
-  echo "EASYRSA_PATH must be defined" >&2
+  echo "$EASYRSA_PATH: EASYRSA_PATH must be defined" >&2
   exit 1
 fi
 # Check EASYRSA_PKI_DIR is defined
@@ -30,6 +30,13 @@ fi
 
 CERT_EXPIRE_DAYS="${EASYRSA_CERT_EXPIRE:-730}"
 EASYRSA_BATCH="${EASYRSA_BATCH_MODE:-0}"
+
+if [ ! -e "$EASYRSA_PKI_DIR/tmp.txt" ]; then
+    touch "$EASYRSA_PKI_DIR/tmp.txt"
+fi
+if [ ! -e "$EASYRSA_PKI_DIR/err.txt" ]; then
+    touch "$EASYRSA_PKI_DIR/err.txt"
+fi
 
 set +e
 # Generate a new client certificate

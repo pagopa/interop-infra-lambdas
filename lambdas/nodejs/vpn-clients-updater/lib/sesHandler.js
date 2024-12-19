@@ -1,10 +1,14 @@
 
 const { SESClient, SendRawEmailCommand } = require('@aws-sdk/client-ses');
 const zipUtils = require('./zipUtils.js');
-const s3Utils = require('./s3Handler.js');
+const s3Utils  = require('./s3Handler.js');
 const sesUtils = require('./sesUtils.js');
+const logger   = require('./winstonLogger.js');
 const vpnClientUtils = require('./vpnClientHandler.js');
 const { Buffer } = require('buffer');
+
+const getSESClient = (region) => new SESClient({ region });
+
 /*
  Supported mime types: https://docs.aws.amazon.com/ses/latest/dg/mime-types.html -> no cer, crt
  Send raw email: https://docs.aws.amazon.com/ses/latest/dg/send-email-raw.html
@@ -15,7 +19,8 @@ exports.sendClientCredentials = async function (
   { vpnClientRegion, vpnEndpointId },
   { mailTemplateBucketName, mailTemplateBucketKey, mailTemplateBucketRegion },
   { fromName, fromAddress, toAddress, subject }, 
-  { clientName }) 
+  { clientName }, 
+  { easyRsaPkiDir }) 
 {
     try {        
         
@@ -31,31 +36,29 @@ exports.sendClientCredentials = async function (
             { fromName: fromName, fromAddress: fromAddress, toAddress: toAddress }, 
             { subject: subject, bodyText: bodyText, bodyHtml: bodyHtml },
             { vpnClientRegion: vpnClientRegion , vpnEndpointId: vpnEndpointId },
-            boundary, sesConfigurationSetName, clientName);
-        
+            boundary, sesConfigurationSetName, clientName, easyRsaPkiDir);
+
+        logger.info('sendClientCredentials::Sending VPN Client credentials');
         const result = await sendRawEmail(sesRegion, fromAddress, toAddress, rawMessage);
+        logger.info('sendClientCredentials::VPN Client credentials sent successfully');
         
-        console.log('VPN Client credentials sent successfully');
-        // console.log(JSON.stringify(rawMessage))
         return result;
 
     } catch (err) {
-        console.error(`Error while sending client ${clientName} certificate through AWS SES`, err);
+        logger.error(`sendClientCredentials::Error while sending client ${clientName} certificate through AWS SES`, err);
         throw err;
     }
 }
 
 
-const getSESClient = (region) => new SESClient({ region });
-
 const buildClientCredentialsEmailMessage = async (
     { fromName, fromAddress, toAddress }, 
     { subject, bodyText, bodyHtml }, 
     { vpnClientRegion, vpnEndpointId },
-    boundary, sesConfigurationSetName, clientName) => 
+    boundary, sesConfigurationSetName, clientName, easyRsaPkiDir) => 
 {
     // Build credentials zip attachment
-    const { credentialsAttachmentName, credentialsAttachmentContent } = await buildCredentialsAttachment(clientName);
+    const { credentialsAttachmentName, credentialsAttachmentContent } = await buildCredentialsAttachment(clientName, easyRsaPkiDir);
 
     // Build vpn config file attachment
     const { vpnConfigAttachmentName, vpnConfigAttachmentContent } = await buildVpnConfigAttachment(vpnClientRegion, vpnEndpointId, clientName);
@@ -66,7 +69,6 @@ const buildClientCredentialsEmailMessage = async (
        ...sesUtils.buildRawMessageAttachment('x-openvpn-profile', vpnConfigAttachmentContent, vpnConfigAttachmentName, boundary, true)
      ].join('\r\n');
 };
-
 
 const sendRawEmail = async (sesRegion, fromAddress, toAddress, rawMessage) => {
     const sesClient = getSESClient(sesRegion);
@@ -79,9 +81,8 @@ const replacePlaceholders = (template, replacements) => {
     return template.replace(/{{(\w+)}}/g, (_, key) => replacements[key] || '');
 }
 
-const buildCredentialsAttachment = async (clientName) => {
-    const easyrsaPkiDir = process.env.EASYRSA_PKI_DIR;
-    const files = [ `${easyrsaPkiDir}/issued/${clientName}.crt`, `${easyrsaPkiDir}/private/${clientName}.key` ];
+const buildCredentialsAttachment = async (clientName, easyRsaPkiDir) => {
+    const files = [ `${easyRsaPkiDir}/issued/${clientName}.crt`, `${easyRsaPkiDir}/private/${clientName}.key` ];
     const zipName = 'credentials.zip';
     const zipBuffer = await zipUtils.createZip(files);
     
@@ -96,7 +97,9 @@ const buildVpnConfigAttachment = async (vpnClientRegion, vpnEndpointId, clientNa
     if (!vpnFileName) {
         vpnFileName = 'vpn-config';
     }
+    logger.info(`buildVpnConfigAttachment::Start Client VPN configuration retrieve`)
     const vpnClientConfig = await vpnClientUtils.getClientVpnConfiguration(vpnClientRegion, vpnEndpointId, clientName);
+    logger.info(`buildVpnConfigAttachment::Client VPN configuration retrieved`)
     
     return {
         vpnConfigAttachmentName: `${vpnFileName}.ovpn`,

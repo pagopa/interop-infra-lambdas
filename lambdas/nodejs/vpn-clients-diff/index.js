@@ -1,56 +1,49 @@
-const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
-const wrapper = require("./lib/scriptsWrapper.js");
-
-const ERROR_MESSAGES = {
-    S3_CLIENT_ERROR: () => `Error creating S3 client`,
-    S3_DOWNLOAD_ERROR: () => `Error downloading S3 file`,
-    S3_PARSING_ERROR: () => `Error parsing S3 file`,
-    S3_PROCESSING_ERROR: () => `Error reading JSON file`
-}
-
-const getS3Client = (region) => {
-    return new S3Client({ forcePathStyle: true, region: region });
-}
+const wrapper         = require("./lib/scriptsWrapper.js");
+const s3Handler       = require("./lib/s3Handler.js");
+const responseHandler = require("./lib/responseHandler.js");
+const logger          = require('./lib/winstonLogger.js');
 
 exports.handler = async function () {
     const {
         VPN_CLIENTS_BUCKET_NAME: vpnClientsBucketName,
         VPN_CLIENTS_KEY_NAME: vpnClientsKeyName,
-        VPN_CLIENTS_BUCKET_REGION: s3Region
+        VPN_CLIENTS_BUCKET_REGION: s3Region,
+        EASYRSA_BUCKET_NAME: easyRsaBucketName,
+        EASYRSA_PATH: easyRsaBucketPath,
+        EASYRSA_PKI_DIR: easyRsaPkiDir
     } = process.env;
     
     let parsedClients;
     let s3fileContent;
-    let s3Client;
 
     try {
-        s3Client = getS3Client(s3Region);
+        logger.info('[Start] Download VPN Client file');
+        s3fileContent = await s3Handler.downloadVPNClientsFile(s3Region, vpnClientsBucketName, vpnClientsKeyName);
+        logger.info('[End] Download VPN Client file');
     } catch (error) {
-        return createErrorResponse(ERROR_MESSAGES.S3_CLIENT_ERROR, error);
-    }
-
-    try {
-        // Download clients file from S3
-        const getObjectCommandInput = {
-            Bucket: vpnClientsBucketName,
-            Key: vpnClientsKeyName
-        };
-        const getObjectCommandResponse = await s3Client.send(new GetObjectCommand(getObjectCommandInput));
-
-        s3fileContent = await getObjectCommandResponse.Body.transformToString('utf-8');
-    } catch (error) {
-        return createErrorResponse(ERROR_MESSAGES.S3_DOWNLOAD_ERROR, error);
+        return responseHandler.createErrorResponse(responseHandler.ERROR_MESSAGES.S3_DOWNLOAD_ERROR(), error);
     }
     
     try {
         parsedClients = JSON.parse(s3fileContent);
     } catch (error) {
-        return createErrorResponse(ERROR_MESSAGES.S3_PARSING_ERROR, error);
+        return responseHandler.createErrorResponse(responseHandler.ERROR_MESSAGES.S3_PARSING_ERROR(), error);
     }
 
+    const easyRSALocalTmpFolder = "/tmp"
+    try {
+        logger.info(`[Start] EasyRSA config download`);
+        await s3Handler.downloadEasyRSAConfig(s3Region, easyRsaBucketName, easyRsaBucketPath, easyRsaPkiDir, easyRSALocalTmpFolder)
+        logger.info(`[End] EasyRSA config download`);
+    } catch (error) {
+        return responseHandler.createErrorResponse(responseHandler.ERROR_MESSAGES.S3_DOWNLOAD_ERROR(), error);
+    }
+    
     try {
         let validUsers = [];
-        let result = await wrapper.listValidClients();
+        logger.info(`[Start] EasyRSA list valid clients`);
+        let result = await wrapper.listValidClients(easyRSALocalTmpFolder, easyRsaPkiDir);
+        logger.info(`[End] EasyRSA list valid clients`);
         
         if (result) {
             validUsers = result.replaceAll('\n','').replaceAll('\t','');
@@ -81,38 +74,18 @@ exports.handler = async function () {
                 create.push({...inputUser});
             }
         }
-
-        console.log(`Clients diff procedure successfully completed (# clients to create: ${create.length}, # clients to revoke ${revoke.length})`);
-
+        
         const lambdaOutput = {
             clients: {
                 create: create,
                 revoke: revoke
             }
         };
+        logger.info(`Clients diff procedure successfully completed (# clients to create: ${create.length}, # clients to revoke ${revoke.length}). Output`,lambdaOutput);
         
-        return createSuccessResponse(lambdaOutput);
+        return responseHandler.createSuccessResponse(lambdaOutput);
 
     } catch (error) {
-        return createErrorResponse(ERROR_MESSAGES.S3_PROCESSING_ERROR, error);
+        return responseHandler.createErrorResponse(responseHandler.ERROR_MESSAGES.EASYRSA_DIFF_ERROR(), error);
     }
 };
-
-const createErrorResponse = (message, error = null) => {
-    console.error(message);
-
-    return {
-        statusCode: 500,
-        body: JSON.stringify({
-            message,
-            error
-        })
-    };
-}
-
-const createSuccessResponse = (result) => {
-    return {
-        statusCode: 200,
-        body: result
-    };
-}

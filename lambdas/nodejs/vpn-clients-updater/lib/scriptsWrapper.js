@@ -1,14 +1,17 @@
 
 const { exec } = require('child_process');
-const path = require('path');
+const path     = require('path');
+const logger   = require('./winstonLogger.js');
 
 const scriptPath = path.join(__dirname, '../scripts/main.sh');
 
 const runCommand = async (command, args = []) => {
   return new Promise((resolve, reject) => {
-    const envVars = `EASYRSA_PATH=${process.env.EASYRSA_PATH} EASYRSA_PKI_DIR=${process.env.EASYRSA_PKI_DIR}`;
-    const cmd = `${envVars} ${scriptPath} ${command} ${args.join(' ')}`;
-    
+    //const envVars = `EASYRSA_PATH=${process.env.EASYRSA_PATH} EASYRSA_PKI_DIR=${process.env.EASYRSA_PKI_DIR}`;
+    //const cmd = `${envVars} ${scriptPath} ${command} ${args.join(' ')}`;
+    const cmd = `${scriptPath} ${command} ${args.join(' ')}`;
+    logger.info(`Execute command: ${cmd}`);
+
     exec(cmd, (error, stdout, stderr) => {
       if (error) {
         reject(`exec error: ${error}`);
@@ -19,16 +22,16 @@ const runCommand = async (command, args = []) => {
         return;
       }
 
-      resolve(stdout);
+      resolve(stdout || true);
     });
   });
 };
 
 module.exports = {
-  createClient: (clientName, clientEmail, defaultCredentialsDurationDays) => runCommand('create-client', [clientName, clientEmail, defaultCredentialsDurationDays]),
-  isValidClient: (clientName) => runCommand('is-valid-client', [clientName]),
-  isRevokedClient: (clientName) => runCommand('is-revoked-client', [clientName]),
-  listValidClients: () => runCommand('list-valid-clients', []),
-  listRevokedClients: () => runCommand('list-revoked-clients', []),
-  revokeClient: (clientName) => runCommand('revoke-client', [clientName]),
+  createClient: (clientName, clientEmail, easyRsaPath, easyRsaPkiDir, credentialsDurationDays) => runCommand('create-client', [clientName, clientEmail, easyRsaPath, easyRsaPkiDir, credentialsDurationDays]),
+  isValidClient: (clientName, easyRsaPath, easyRsaPkiDir) => runCommand('is-valid-client', [clientName, easyRsaPath, easyRsaPkiDir]),
+  isRevokedClient: (clientName, easyRsaPath, easyRsaPkiDir) => runCommand('is-revoked-client', [clientName, easyRsaPath, easyRsaPkiDir]),
+  listValidClients: (easyRsaPath, easyRsaPkiDir) => runCommand('list-valid-clients', [easyRsaPath, easyRsaPkiDir]),
+  listRevokedClients: (easyRsaPath, easyRsaPkiDir) => runCommand('list-revoked-clients', [easyRsaPath, easyRsaPkiDir]),
+  revokeClient: (clientName, easyRsaPath, easyRsaPkiDir) => runCommand('revoke-client', [clientName, easyRsaPath, easyRsaPkiDir])
 };

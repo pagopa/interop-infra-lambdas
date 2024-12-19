@@ -23,8 +23,8 @@ WORKDIR ${LAMBDA_TASK_ROOT}
 RUN npm install
 
 # Set environment variables
-ENV EASYRSA_PATH="/opt/easyrsa"
-ENV PATH="$EASYRSA_PATH:$PATH"
+ENV EASYRSA_BIN_PATH="/opt/easyrsa"
+ENV PATH="$EASYRSA_BIN_PATH:$PATH"
 ENV LD_LIBRARY_PATH=""
 
 CMD ["index.handler"]
