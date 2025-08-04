@@ -1,4 +1,4 @@
-import { DescribeStatementCommandOutput, RedshiftData } from '@aws-sdk/client-redshift-data';
+import { RedshiftData } from '@aws-sdk/client-redshift-data';
 import { StatementError } from './StatementError';
 
 function assertNotEmpty( val: string | undefined, name: string) {
@@ -33,7 +33,7 @@ export class RedshiftDataWrapper {
 
   async executeSqlStatementWithData( sql: string ) {
   
-    let statusResult = await this.executeSqlStatement( sql );
+    const statusResult = await this.executeSqlStatement( sql );
     const recordsResult = await this.#redshift.getStatementResult({ Id: statusResult.Id });
     return recordsResult;
   }
@@ -47,11 +47,11 @@ export class RedshiftDataWrapper {
       Sql: sql,
     });
     
-    let statementId = executeStatementCommand.Id;
-    
+    const statementId = executeStatementCommand.Id;
     if (! statementId ) {
       throw new Error('error retrieving statement id');
     }
+
     return await this.#waitStatement( statementId );
   }
 

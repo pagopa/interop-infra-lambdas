@@ -1,5 +1,4 @@
 import { RedshiftDataWrapper } from './RedshiftDataWrapper';
-import { StatementError } from './StatementError';
 
 const ERROR_MESSAGES = {
   REDSHIFT_CLIENT_ERROR: () => `Error creating RedshiftData client`,
@@ -39,7 +38,7 @@ exports.handler = async function () {
   }
   
   // - Refresh views in parallel, starting from dependencies.
-  for( let materializedViewsGroup of groupedMaterializedViews ) {
+  for( const materializedViewsGroup of groupedMaterializedViews ) {
     console.log( materializedViewsGroup );
     
     try {
@@ -106,7 +105,7 @@ async function listMaterializedViews( redshiftDataClient: RedshiftDataWrapper ):
 
 function groupMaterializedViews( infos: ViewAndLevel[]): string[][] {
 
-  const tmp: { [key: string]: any } = {};
+  const tmp: { [key: string]: string[] } = {};
 
   infos.forEach( el => {
     const key = ("000000000" + el.mvLevel).slice(-5);
@@ -117,8 +116,8 @@ function groupMaterializedViews( infos: ViewAndLevel[]): string[][] {
     tmp[key].push(el.mvFullName)
   })
 
-  let grouped: string[][] = [];
-  for( let key of Object.keys( tmp).sort() ) {
+  const grouped: string[][] = [];
+  for( const key of Object.keys( tmp).sort() ) {
     grouped.push( tmp[key] )
   }
   return grouped;
@@ -132,9 +131,9 @@ async function refreshOneMaterializedView( redshiftDataClient: RedshiftDataWrapp
   return name;
 }
 
-function createErrorResponse(message: string, error?: any) {
+function createErrorResponse(message: string, error?: Error) {
   console.error(message);
-  console.error(error.toString());
+  console.error(error);
   return {
     statusCode: 500,
     body: JSON.stringify({
