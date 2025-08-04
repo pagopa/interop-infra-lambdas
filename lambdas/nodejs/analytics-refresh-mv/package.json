@@ -8,7 +8,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "build": "tsc",
-    "run-local": "tsc && node -e \"require('./dist/index.js').handler()\" "
+    "run-local": "tsc && node -e \"require('./dist/index.js').handler()\" ",
+    "build-archive": "tsc && (cd dist && zip -r ../analytics-refresh-mv-lambda.zip *)"
   },
   "keywords": [],
   "author": "",

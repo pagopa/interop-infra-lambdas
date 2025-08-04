@@ -131,7 +131,7 @@ async function refreshOneMaterializedView( redshiftDataClient: RedshiftDataWrapp
   return name;
 }
 
-function createErrorResponse(message: string, error?: Error) {
+function createErrorResponse(message: string, error?: unknown) {
   console.error(message);
   console.error(error);
   return {

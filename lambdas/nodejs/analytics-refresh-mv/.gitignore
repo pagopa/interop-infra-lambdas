@@ -13,3 +13,5 @@ node_modules/
 
 ecr-push.sh
 startup.sh
+
+*.zip
