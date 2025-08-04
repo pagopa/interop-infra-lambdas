@@ -1,0 +1,26 @@
+{
+  "name": "analytics-refresh-mv",
+  "version": "1.0.0",
+  "description": "Code for lambda that refresh analytics materialized views",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "build": "tsc",
+    "run-local": "tsc && node -e \"require('./dist/index.js').handler()\" "
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@eslint/js": "^9.32.0",
+    "@types/node": "^20.14.9",
+    "eslint": "^9.32.0",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.38.0"
+  },
+  "dependencies": {
+    "@aws-sdk/client-redshift-data": "^3.609.0"
+  }
+}
