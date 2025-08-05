@@ -13,6 +13,8 @@ type ViewAndLevel = {
 
 
 exports.handler = async function () {
+  
+  const SCHEMAS_LIST = parseSchemaList( process.env.VIEWS_SCHEMAS_NAMES );
 
   let redshiftDataClient: RedshiftDataWrapper;
   let groupedMaterializedViews: string[][];
@@ -24,17 +26,17 @@ exports.handler = async function () {
         process.env.REDSHIFT_DB_USER,
       );
   } catch (error) {
-    return createErrorResponse(ERROR_MESSAGES.REDSHIFT_CLIENT_ERROR(), error );
+    throw logAndRethrow(ERROR_MESSAGES.REDSHIFT_CLIENT_ERROR(), error );
   }
 
   // - List materialized views that need refresh ...
   try {
-    const materializedViewList: ViewAndLevel[] = await listMaterializedViews( redshiftDataClient );
+    const materializedViewList: ViewAndLevel[] = await listMaterializedViews( redshiftDataClient, SCHEMAS_LIST );
 
     // ... grouped by depth level.
     groupedMaterializedViews = groupMaterializedViews( materializedViewList );
   } catch (error) {
-    return createErrorResponse(ERROR_MESSAGES.REDSHIFT_LIST_VIEWS_ERROR(), error );
+    throw logAndRethrow(ERROR_MESSAGES.REDSHIFT_LIST_VIEWS_ERROR(), error );
   }
   
   // - Refresh views in parallel, starting from dependencies.
@@ -48,18 +50,15 @@ exports.handler = async function () {
       await Promise.all( refreshing );
 
     } catch (error) {
-        return createErrorResponse(ERROR_MESSAGES.REFRESHING_VIEWS(), error );
-    }
-    
+        throw logAndRethrow(ERROR_MESSAGES.REFRESHING_VIEWS(), error );
+    } 
   }
-
-  return createSuccessResponse( "Materialized views updated");
 };
 
 
 
-async function listMaterializedViews( redshiftDataClient: RedshiftDataWrapper ): Promise<ViewAndLevel[]> {
-  
+async function listMaterializedViews( redshiftDataClient: RedshiftDataWrapper, schemas: string[] ): Promise<ViewAndLevel[]> {
+
   const LIST_MV_VIEWS = `
       with
         views_to_refresh as (
@@ -71,7 +70,7 @@ async function listMaterializedViews( redshiftDataClient: RedshiftDataWrapper ):
           where
               is_stale = 't'
             and 
-              schema_name in ('views', 'sub_views')
+              schema_name in ( '${schemas.join("', '")}' )
         )
       select
         mv_full_name,
@@ -131,21 +130,16 @@ async function refreshOneMaterializedView( redshiftDataClient: RedshiftDataWrapp
   return name;
 }
 
-function createErrorResponse(message: string, error?: unknown) {
-  console.error(message);
-  console.error(error);
-  return {
-    statusCode: 500,
-    body: JSON.stringify({
-      message,
-      error
-    })
-  };
+function parseSchemaList( jsonArrayStr: string | undefined): string[] {
+  if( jsonArrayStr == undefined ) {
+    throw new Error("Schema list can't be empty");
+  }
+
+  return JSON.parse( jsonArrayStr );
 }
 
-function createSuccessResponse( result: string ) {
-  return {
-    statusCode: 200,
-    body: result
-  };
+function logAndRethrow(message: string, error?: unknown): Error {
+  console.error(message);
+  console.error(error);
+  return new Error( message + "\n" + error );
 }
