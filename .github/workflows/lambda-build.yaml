@@ -1,0 +1,116 @@
+name: Build
+
+on: 
+  push:
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  extract-ref:
+    runs-on: ubuntu-latest
+    outputs:
+      ref_simple_name: ${{ steps.extract.outputs.ref_simple_name }}
+    steps:
+      - id: extract
+        run: |
+          REF_SIMPLE_NAME=$(basename "${{github.ref_name}}")
+          echo "Reference simple name ${REF_SIMPLE_NAME}"
+          echo "ref_simple_name=${REF_SIMPLE_NAME}" >> $GITHUB_OUTPUT
+  
+  build-all-projects:
+    name: Lint, build, and archive all node projects
+    runs-on: ubuntu-latest
+    needs: extract-ref
+    env: 
+      artifact_suffix: |
+        ${{ 
+          github.ref_type == 'branch' 
+          && format('{0}_{1}', needs.extract-ref.outputs.ref_simple_name, github.sha )
+          || needs.extract-ref.outputs.ref_simple_name 
+        }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Compile and package all lambdas
+        run: |
+          pwd
+          mkdir zips
+          zips_folder=$( cd zips && pwd)
+          echo " - Destination folder for archives is ${zips_folder}"
+
+          projects=$( find ./ -name "package.json" -and -not -path "*/node_modules/*" )
+          for prj_file in ${projects} ; do
+            prj_dir=$( dirname $prj_file )
+            prj_name=$( cat ${prj_file} | jq -r '.name' )
+            
+            echo ""
+            echo ""
+            echo " === NODE PROJECT ${prj_name} IN ${prj_dir}"
+            echo " ===================================================================="
+      
+            if ( [ -f "${prj_dir}/Dockerfile" ] ) then
+              echo " === Start DOCKER build"
+              (
+                echo ""
+                echo " - Enter into project folder"
+                cd ${prj_dir} 
+                pwd 
+
+                echo ""
+                echo " - Lint node code (if configured)"
+                npm ci
+                npm run --if-present lint
+
+                docker build -t ${prj_name} .
+              )
+            else 
+              echo " === Start NPM build"
+              (
+                echo ""
+                echo " - Enter into project folder"
+                cd ${prj_dir} 
+                pwd 
+
+                echo ""
+                echo " - Download dependencies"
+                npm ci 
+
+                echo ""
+                echo " - Build project"
+                npm run --if-present lint
+                npm run build 
+
+                echo ""
+                echo " - Package project code"
+                (cd dist && zip -q -r "${zips_folder}/${prj_name}.zip" *) 
+
+                echo ""
+                echo " - Package runtime libraries"
+                mkdir nodejs 
+                cp package.json package-lock.json nodejs 
+                NODE_ENV=production npm ci --prefix nodejs 
+                zip -q -r "${zips_folder}/${prj_name}-liblayer.zip" nodejs 
+            )
+            fi
+          done
+
+          echo ""
+          echo " - Produced Docker images"
+          docker images
+
+          echo ""
+          echo " - Produced Zip Archives ${zips_folder} "
+          ls -1 "${zips_folder}"
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: all_lambdas__${{ env.artifact_suffix }}
+          path: zips/*.zip
+

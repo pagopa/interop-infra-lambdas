@@ -1,0 +1,50 @@
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Repository tag to use'
+        required: true
+        type: string
+
+name: Create Release
+permissions:
+  contents: write
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Look for build action execution and download artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          run_id=$( \
+            gh -R ${{ github.repository }} run list \
+               -w Build -b ${{ github.event.inputs.tag }} --json number,url,workflowDatabaseId,databaseId \
+              | jq -r 'map( .databaseId ) | join(",")' \
+          )
+          echo "Finded build run id ${run_id} for tag ${{ github.event.inputs.tag }}"
+          
+          case "${run_id}" in 
+            *,*)
+            echo "ERROR: The run_id is not unique!!!!!!!"
+            exit 1
+            ;;
+          esac
+
+          echo "Download artifacts"
+          mkdir artifacts
+          gh -R ${{ github.repository }} run download -D artifacts ${run_id}
+          ls artifacts
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir released_files
+          find artifacts -name "*.zip" -type f -exec cp {} released_files \;
+          gh -R ${{ github.repository }} release create -d \
+             --verify-tag ${{ github.event.inputs.tag }} \
+             -t ${{ github.event.inputs.tag }} \
+             released_files/*
+
+              
