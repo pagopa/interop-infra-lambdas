@@ -1,9 +1,11 @@
 import { RedshiftDataWrapper } from './RedshiftDataWrapper';
 
 const ERROR_MESSAGES = {
+  REQUIRED_PARAMETER: (name: string) => `Parameter '${name}' is required.`,
   REDSHIFT_CLIENT_ERROR: () => `Error creating RedshiftData client`,
   REDSHIFT_LIST_VIEWS_ERROR: () => 'Error listing materialized views',
-  REFRESHING_VIEWS: () => 'Error refreshing views'
+  REFRESHING_VIEWS: () => 'Error refreshing views',
+  REDSHIFT_UPDATE_LAST_REFRESH_INFO_ERROR: () => 'Error refreshing information about materialized views refresh'
 }
 
 type ViewAndLevel = {
@@ -15,6 +17,11 @@ type ViewAndLevel = {
 exports.handler = async function () {
   
   const SCHEMAS_LIST = parseSchemaList( process.env.VIEWS_SCHEMAS_NAMES );
+  const PROCEDURES_SCHEMA = process.env.PROCEDURES_SCHEMA;
+
+  if( PROCEDURES_SCHEMA == undefined ) {
+    throw logAndRethrow(ERROR_MESSAGES.REQUIRED_PARAMETER('PROCEDURES_SCHEMA'));
+  }
 
   let redshiftDataClient: RedshiftDataWrapper;
   let groupedMaterializedViews: string[][];
@@ -53,6 +60,14 @@ exports.handler = async function () {
         throw logAndRethrow(ERROR_MESSAGES.REFRESHING_VIEWS(), error );
     } 
   }
+
+  // - Update last refresh info table, useful for quicksight user.
+  try {
+    await updateLastMvRefreshInfo( redshiftDataClient, PROCEDURES_SCHEMA, SCHEMAS_LIST );
+  } catch (error) {
+    throw logAndRethrow(ERROR_MESSAGES.REDSHIFT_UPDATE_LAST_REFRESH_INFO_ERROR(), error );
+  }
+
 };
 
 
@@ -142,4 +157,17 @@ function logAndRethrow(message: string, error?: unknown): Error {
   console.error(message);
   console.error(error);
   return new Error( message + "\n" + error );
+}
+
+async function updateLastMvRefreshInfo(
+  redshiftDataClient: RedshiftDataWrapper,
+  procedureSchema: string,
+  schemas: string[]
+): Promise<string>
+{
+  const sql = "CALL " + procedureSchema + ".update_last_mv_refresh_info( '" + schemas.join(", ") + "' )";
+  console.log("Start " + sql );
+  await redshiftDataClient.executeSqlStatement( sql );
+  console.log("End " + sql );
+  return "table updated";
 }
