@@ -1,15 +1,8 @@
-import { RedshiftData } from '@aws-sdk/client-redshift-data';
+import { GetStatementResultCommandOutput, RedshiftData, SqlParameter } from '@aws-sdk/client-redshift-data';
 import { StatementError } from './StatementError';
+import { assertNotEmpty } from './utils';
 
-function assertNotEmpty( val: string | undefined, name: string) {
-  
-  if ( !val || ( typeof val == "string" && !val.trim()) ) {
-    const message = name + " can't be empty";
-    console.error(message);
-    throw new Error(message);
-  }
-  return val;
-}
+export type ObjectWithStringValues = { [key:string]: string | undefined };
 
 export class RedshiftDataWrapper {
   
@@ -30,21 +23,62 @@ export class RedshiftDataWrapper {
     this.#redshift = new RedshiftData({});
 
   }
-
-  async executeSqlStatementWithData( sql: string ) {
   
-    const statusResult = await this.executeSqlStatement( sql );
+  async executeSqlStatementsWithData( statements: { sql: string, parameters: ObjectWithStringValues}[] ) {
+    const results: (GetStatementResultCommandOutput | null)[] = [];
+
+    const statusResult = await this.executeSqlStatements( statements );
+    for ( let subStatement of statusResult.SubStatements || []) {
+      let result;
+      if ( subStatement.HasResultSet ) {
+        result = await this.#redshift.getStatementResult({ Id: subStatement.Id });
+      }
+      else {
+        result = null;
+      }
+      results.push( result );
+    }
+    
+    return results;
+  }
+
+  async executeSqlStatementWithData( sql: string, parameters: ObjectWithStringValues ) {
+  
+    const statusResult = await this.executeSqlStatement( sql, parameters );
     const recordsResult = await this.#redshift.getStatementResult({ Id: statusResult.Id });
     return recordsResult;
   }
   
-  async executeSqlStatement( sql: string) {
+  async executeSqlStatements( statements: { sql: string, parameters: ObjectWithStringValues}[] ) {
+    // - Do not have a wayto insert parameters :(
+    //   https://docs.aws.amazon.com/redshift-data/latest/APIReference/API_BatchExecuteStatement.html
+    const sqls = statements.map( 
+      statement => substituteParameters( statement.sql, statement.parameters )
+    );
+
+    const executeStatementCommand = await this.#redshift.batchExecuteStatement({
+      ClusterIdentifier: this.#redshiftClusterIdentifier,
+      Database: this.#redshiftDatabaseName,
+      DbUser: this.#redshiftDatabaseUserName,
+      Sqls: sqls,
+    });
+    
+    const statementId = executeStatementCommand.Id;
+    if (! statementId ) {
+      throw new Error('error retrieving statement id');
+    }
+
+    return await this.#waitStatement( statementId );
+}
+
+  async executeSqlStatement( sql: string, parameters: ObjectWithStringValues) {
     
     const executeStatementCommand = await this.#redshift.executeStatement({
       ClusterIdentifier: this.#redshiftClusterIdentifier,
       Database: this.#redshiftDatabaseName,
       DbUser: this.#redshiftDatabaseUserName,
       Sql: sql,
+      Parameters: objectToStatementParameters( parameters)
     });
     
     const statementId = executeStatementCommand.Id;
@@ -69,4 +103,26 @@ export class RedshiftDataWrapper {
     }
     return statusResult;
   }
+}
+
+function objectToStatementParameters( paramsObj: ObjectWithStringValues ) {
+  const result: SqlParameter[] = [];
+  for( let key of Object.keys( paramsObj )) {
+    result.push({ name: key, value: paramsObj[key] })
+  }
+  return result;
+}
+
+// - ExecuteBatchStatement Do not have a way to insert parameters :(
+//   https://docs.aws.amazon.com/redshift-data/latest/APIReference/API_BatchExecuteStatement.html
+function substituteParameters( sql: string, paramsObj: ObjectWithStringValues ) {
+
+  let sqlWithEscapedParameters = sql;
+  for( let key of Object.keys( paramsObj )) {
+    const val = "" + paramsObj[key];
+    const escapedVal = val.replace(/'/g, "''");
+    sql = sql.replace( new RegExp( ":" + key + " "), `'${escapedVal}' `)
+  }
+
+  return sql;
 }

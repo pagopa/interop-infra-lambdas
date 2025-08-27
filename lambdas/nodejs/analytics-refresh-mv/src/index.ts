@@ -1,3 +1,4 @@
+import { MaterializedViewHelper, ViewAndLevel } from './MaterializedViewHelper';
 import { RedshiftDataWrapper } from './RedshiftDataWrapper';
 
 const ERROR_MESSAGES = {
@@ -7,11 +8,6 @@ const ERROR_MESSAGES = {
   REFRESHING_VIEWS: () => 'Error refreshing views',
   REDSHIFT_UPDATE_LAST_REFRESH_INFO_ERROR: () => 'Error refreshing information about materialized views refresh'
 }
-
-type ViewAndLevel = {
-    mvFullName: string;
-    mvLevel: number;
-};
 
 
 exports.handler = async function () {
@@ -23,14 +19,19 @@ exports.handler = async function () {
     throw logAndRethrow(ERROR_MESSAGES.REQUIRED_PARAMETER('PROCEDURES_SCHEMA'));
   }
 
-  let redshiftDataClient: RedshiftDataWrapper;
-  let groupedMaterializedViews: string[][];
+  let materializedViewHelper: MaterializedViewHelper;
+  let groupedMaterializedViews: ViewAndLevel[][];
   
   try {
-    redshiftDataClient = new RedshiftDataWrapper(
+    let redshiftDataClient = new RedshiftDataWrapper(
         process.env.REDSHIFT_CLUSTER_IDENTIFIER,
         process.env.REDSHIFT_DATABASE_NAME,
         process.env.REDSHIFT_DB_USER,
+      );
+    materializedViewHelper = new MaterializedViewHelper(
+        redshiftDataClient,
+        SCHEMAS_LIST,
+        PROCEDURES_SCHEMA
       );
   } catch (error) {
     throw logAndRethrow(ERROR_MESSAGES.REDSHIFT_CLIENT_ERROR(), error );
@@ -38,7 +39,7 @@ exports.handler = async function () {
 
   // - List materialized views that need refresh ...
   try {
-    const materializedViewList: ViewAndLevel[] = await listMaterializedViews( redshiftDataClient, SCHEMAS_LIST );
+    const materializedViewList = await materializedViewHelper.listMaterializedViews();
 
     // ... grouped by depth level.
     groupedMaterializedViews = groupMaterializedViews( materializedViewList );
@@ -52,7 +53,7 @@ exports.handler = async function () {
     
     try {
       const refreshing = materializedViewsGroup.map( 
-        name => refreshOneMaterializedView( redshiftDataClient, name) 
+        v => materializedViewHelper.refreshOneMaterializedView( v.mvSchemaName, v.mvName )
       );
       await Promise.all( refreshing );
 
@@ -63,7 +64,7 @@ exports.handler = async function () {
 
   // - Update last refresh info table, useful for quicksight user.
   try {
-    await updateLastMvRefreshInfo( redshiftDataClient, PROCEDURES_SCHEMA, SCHEMAS_LIST );
+    await materializedViewHelper.updateLastMvRefreshInfo();
   } catch (error) {
     throw logAndRethrow(ERROR_MESSAGES.REDSHIFT_UPDATE_LAST_REFRESH_INFO_ERROR(), error );
   }
@@ -71,55 +72,9 @@ exports.handler = async function () {
 };
 
 
+function groupMaterializedViews( infos: ViewAndLevel[]): ViewAndLevel[][] {
 
-async function listMaterializedViews( redshiftDataClient: RedshiftDataWrapper, schemas: string[] ): Promise<ViewAndLevel[]> {
-
-  const LIST_MV_VIEWS = `
-      with
-        views_to_refresh as (
-          select
-            schema_name + '.' + name as mv_full_name,
-            cast(REGEXP_REPLACE( name, 'mv_([0-9][0-9]).*', '$1') as integer) as mv_level 
-          from 
-            SVV_MV_INFO
-          where
-              is_stale = 't'
-            and 
-              schema_name in ( '${schemas.join("', '")}' )
-        )
-      select
-        mv_full_name,
-        mv_level
-      from
-        views_to_refresh
-      order by
-        mv_level asc,
-        mv_full_name asc
-    `;
-
-  const commandResult = await redshiftDataClient.executeSqlStatementWithData( LIST_MV_VIEWS );
-  const result : ViewAndLevel[] = []
-  
-  if( commandResult.Records ) {
-    commandResult.Records.forEach(rec => {
-
-      const mvFullName = rec[0].stringValue;
-      const mvLevel = rec[1].longValue;
-      if( !mvFullName || mvLevel === undefined ) {
-        throw new Error( JSON.stringify(rec) + " has no viewName or level");
-      }
-      const oneView = { mvFullName, mvLevel };
-      result.push( oneView );
-    })
-  }
-  return result;
-}
-
-
-
-function groupMaterializedViews( infos: ViewAndLevel[]): string[][] {
-
-  const tmp: { [key: string]: string[] } = {};
+  const tmp: { [key: string]: ViewAndLevel[] } = {};
 
   infos.forEach( el => {
     const key = ("000000000" + el.mvLevel).slice(-5);
@@ -127,22 +82,14 @@ function groupMaterializedViews( infos: ViewAndLevel[]): string[][] {
       tmp[key] = [];
     }
 
-    tmp[key].push(el.mvFullName)
+    tmp[key].push(el)
   })
 
-  const grouped: string[][] = [];
+  const grouped: ViewAndLevel[][] = [];
   for( const key of Object.keys( tmp).sort() ) {
     grouped.push( tmp[key] )
   }
   return grouped;
-}
-
-async function refreshOneMaterializedView( redshiftDataClient: RedshiftDataWrapper, name: string ): Promise<string> {
-  const sql = "REFRESH MATERIALIZED VIEW " + name;
-  console.log("Start " + sql );
-  await redshiftDataClient.executeSqlStatement( sql );
-  console.log("End " + sql );
-  return name;
 }
 
 function parseSchemaList( jsonArrayStr: string | undefined): string[] {
@@ -157,17 +104,4 @@ function logAndRethrow(message: string, error?: unknown): Error {
   console.error(message);
   console.error(error);
   return new Error( message + "\n" + error );
-}
-
-async function updateLastMvRefreshInfo(
-  redshiftDataClient: RedshiftDataWrapper,
-  procedureSchema: string,
-  schemas: string[]
-): Promise<string>
-{
-  const sql = "CALL " + procedureSchema + ".update_last_mv_refresh_info( '" + schemas.join(", ") + "' )";
-  console.log("Start " + sql );
-  await redshiftDataClient.executeSqlStatement( sql );
-  console.log("End " + sql );
-  return "table updated";
 }
