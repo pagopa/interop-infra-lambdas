@@ -25,12 +25,12 @@ export class MaterializedViewHelper {
     this.#proceduresSchema = assertAlphanumericNotEmpty( proceduresSchema, "proceduresSchema" );
   }
 
-  async listMaterializedViews(): Promise<ViewAndLevel[]> {
+  async listStaleMaterializedViews(): Promise<ViewAndLevel[]> {
     
     const schemasList = this.#viewsSchemas.join(", ");
     const LIST_MV_VIEWS = [
       {
-        sql: "CALL \"" + this.#proceduresSchema + "\".list_need_refresh_views( :schemasList );",
+        sql: "CALL \"" + this.#proceduresSchema + "\".list_stale_materialized_views( :schemasList );",
         parameters: { schemasList }
       },
       {

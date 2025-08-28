@@ -9,7 +9,7 @@ export function assertNotEmpty( val: string | undefined, name: string) {
   return val;
 }
 
-
+// - Allow also '_' character
 export function assertAlphanumericNotEmpty( val: string | undefined, name: string ) {
   const definedVal = assertNotEmpty( val, name);
 

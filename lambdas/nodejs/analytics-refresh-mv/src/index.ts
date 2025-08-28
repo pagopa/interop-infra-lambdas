@@ -39,7 +39,7 @@ exports.handler = async function () {
 
   // - List materialized views that need refresh ...
   try {
-    const materializedViewList = await materializedViewHelper.listMaterializedViews();
+    const materializedViewList = await materializedViewHelper.listStaleMaterializedViews();
 
     // ... grouped by depth level.
     groupedMaterializedViews = groupMaterializedViews( materializedViewList );
