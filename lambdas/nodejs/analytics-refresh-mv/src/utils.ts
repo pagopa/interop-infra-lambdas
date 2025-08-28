@@ -23,6 +23,6 @@ export function assertAlphanumericNotEmpty( val: string | undefined, name: strin
 }
 
 export function intToStringWithZeroPadding( i: number, strLength: number ) {
-  return ("000000000" + i).slice(-5);
+  return ("000000000" + i).slice(-1 * strLength);
 }
  
