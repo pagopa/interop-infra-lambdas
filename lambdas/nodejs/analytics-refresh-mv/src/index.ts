@@ -1,5 +1,6 @@
 import { MaterializedViewHelper, ViewAndLevel } from './MaterializedViewHelper';
 import { RedshiftDataWrapper } from './RedshiftDataWrapper';
+import { intToStringWithZeroPadding } from './utils';
 
 const ERROR_MESSAGES = {
   REQUIRED_PARAMETER: (name: string) => `Parameter '${name}' is required.`,
@@ -71,13 +72,16 @@ exports.handler = async function () {
 
 };
 
-
+// - Group by level
 function groupMaterializedViews( infos: ViewAndLevel[]): ViewAndLevel[][] {
 
+  // - Every property of tmp will represent a level.
   const tmp: { [key: string]: ViewAndLevel[] } = {};
 
   infos.forEach( el => {
-    const key = ("000000000" + el.mvLevel).slice(-5);
+
+    // - 5 means max 100k views dependency levels, it will be enough  
+    const key = intToStringWithZeroPadding( el.mvLevel, 5 ); 
     if( ! tmp[key] ) {
       tmp[key] = [];
     }

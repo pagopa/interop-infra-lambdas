@@ -21,3 +21,8 @@ export function assertAlphanumericNotEmpty( val: string | undefined, name: strin
 
   return definedVal;
 }
+
+export function intToStringWithZeroPadding( i: number, strLength: number ) {
+  return ("000000000" + i).slice(-5);
+}
+ 
