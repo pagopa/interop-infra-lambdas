@@ -23,7 +23,7 @@ exports.handler = async function () {
   let groupedMaterializedViews: ViewAndLevel[][];
   
   try {
-    let redshiftDataClient = new RedshiftDataWrapper(
+    const redshiftDataClient = new RedshiftDataWrapper(
         process.env.REDSHIFT_CLUSTER_IDENTIFIER,
         process.env.REDSHIFT_DATABASE_NAME,
         process.env.REDSHIFT_DB_USER,

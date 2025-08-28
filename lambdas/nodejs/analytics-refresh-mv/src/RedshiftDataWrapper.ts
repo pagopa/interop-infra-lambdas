@@ -28,7 +28,7 @@ export class RedshiftDataWrapper {
     const results: (GetStatementResultCommandOutput | null)[] = [];
 
     const statusResult = await this.executeSqlStatements( statements );
-    for ( let subStatement of statusResult.SubStatements || []) {
+    for ( const subStatement of statusResult.SubStatements || []) {
       let result;
       if ( subStatement.HasResultSet ) {
         result = await this.#redshift.getStatementResult({ Id: subStatement.Id });
@@ -107,7 +107,7 @@ export class RedshiftDataWrapper {
 
 function objectToStatementParameters( paramsObj: ObjectWithStringValues ) {
   const result: SqlParameter[] = [];
-  for( let key of Object.keys( paramsObj )) {
+  for( const key of Object.keys( paramsObj )) {
     result.push({ name: key, value: paramsObj[key] })
   }
   return result;
@@ -118,11 +118,11 @@ function objectToStatementParameters( paramsObj: ObjectWithStringValues ) {
 function substituteParameters( sql: string, paramsObj: ObjectWithStringValues ) {
 
   let sqlWithEscapedParameters = sql;
-  for( let key of Object.keys( paramsObj )) {
+  for( const key of Object.keys( paramsObj )) {
     const val = "" + paramsObj[key];
     const escapedVal = val.replace(/'/g, "''");
-    sql = sql.replace( new RegExp( ":" + key + " "), `'${escapedVal}' `)
+    sqlWithEscapedParameters = sqlWithEscapedParameters.replace( new RegExp( ":" + key + " "), `'${escapedVal}' `)
   }
 
-  return sql;
+  return sqlWithEscapedParameters;
 }
