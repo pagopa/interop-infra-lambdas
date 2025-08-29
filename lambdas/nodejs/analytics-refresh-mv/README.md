@@ -8,8 +8,9 @@ start with__ `mv_NN_` where __NN__ is the view's _level_
 
 This lambda needs some stored procedure because the RedShift user used by this lambda 
 is not the materialized views owner.
-- list_need_refresh_views
+- list_stale_materialized_views
 - refresh_materialized_view
+- last_mv_refresh_info
 
 
 ## Parameters
@@ -49,3 +50,6 @@ The used algorithm is:
 - After all refresh, the lambda, call procedure `list_need_refresh_views` to update 
   table `list_need_refresh_views_results` containing refresh timestamps. This table 
   is used by QuickSight dashboards.
+
+## Local execution
+Set environment variables values in `.env` file and execute `npm run local`
