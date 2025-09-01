@@ -1,0 +1,9 @@
+# Values for dev environment.
+# Configure the shell session with environment variables for aws login 
+# and execute npm run local
+REDSHIFT_CLUSTER_IDENTIFIER="interop-analytics-dev" 
+REDSHIFT_DATABASE_NAME="interop_dev" 
+REDSHIFT_DB_USER="dev_mv_refresher_user"  
+
+VIEWS_SCHEMAS_NAMES='["views", "sub_views"]'
+PROCEDURES_SCHEMA="sub_views"
