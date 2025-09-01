@@ -115,7 +115,9 @@ jobs:
                 PACKAGES="${PACKAGES},"
               fi
 
-              PACKAGES="${PACKAGES} {\"name\":\"$( basename $f )\", \"folder\":\"$f\", \"has_dockerfile\":\"$has_dockerfile\"}"
+              lambda_name=$( cat "$f/package.json" | jq -r '.name' )
+              #lambda_name=$( basename $f )
+              PACKAGES="${PACKAGES} {\"name\":\"${lambda_name}\", \"folder\":\"$f\", \"has_dockerfile\":\"$has_dockerfile\"}"
               first="false"
             fi
           done
