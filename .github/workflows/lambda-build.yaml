@@ -160,6 +160,10 @@ jobs:
         working-directory: ${{ matrix.lambda.folder }}
         run: npm run build
 
+      - name: Run tests
+        working-directory: ${{ matrix.lambda.folder }}
+        run: npm test
+
       - name: Package lambda code
         working-directory: ${{ matrix.lambda.folder }}
         run: |

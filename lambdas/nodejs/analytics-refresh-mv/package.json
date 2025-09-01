@@ -4,7 +4,7 @@
   "description": "Code for lambda that refresh analytics materialized views",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "echo \"NO TEST IMPLEMENTED\" && exit 0",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "build": "tsc",
