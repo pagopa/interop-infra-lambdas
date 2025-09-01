@@ -20,131 +20,194 @@ env:
   NODE_VERSION: '20'
 
 jobs:
-  extract-ref:
+
+  ######                           COMMONS JOBS USED FOR ALL LAMBDAS                            ###
+  #################################################################################################
+  extract_commitid_or_tag_name:
     runs-on: ubuntu-latest
     outputs:
-      ref_simple_name: ${{ steps.extract.outputs.ref_simple_name }}
+      commitid_or_tag_name: ${{ steps.extract.outputs.commitid_or_tag_name }}
     steps:
       - id: extract
+        name: Compute tag name or commit id
         run: |
-          REF_SIMPLE_NAME=$(basename "${{github.ref_name}}")
-          echo "Reference simple name ${REF_SIMPLE_NAME}"
-          echo "ref_simple_name=${REF_SIMPLE_NAME}" >> $GITHUB_OUTPUT
-  
-  build-all-projects:
-    name: Lint, build, and archive all node projects
-    runs-on: ubuntu-latest
-    needs: extract-ref
-    env: 
-      artifact_suffix: |
-        ${{ 
-          github.ref_type == 'branch' 
-          && format('{0}_{1}', needs.extract-ref.outputs.ref_simple_name, github.sha )
-          || needs.extract-ref.outputs.ref_simple_name 
-        }}
+          set -euo pipefail
+          if ( [ "tag" == "${{ github.ref_type }}" ] ) then
+            tag_name=$( basename "${{github.ref_name}}" )
+            echo "${{ github.ref_type }} name is ${tag_name}"
+            echo "commitid_or_tag_name=${tag_name}" >> $GITHUB_OUTPUT
+          else
+            echo "${{ github.ref_type }} commit id is ${{github.sha}}"
+            echo "commitid_or_tag_name=${{github.sha}}" >> $GITHUB_OUTPUT
+          fi
 
+  ######                              DOCKER LAMBDAS RELATED JOBS                               ###
+  #################################################################################################
+  list_docker_lambdas:
+    runs-on: ubuntu-latest
+    outputs:
+      lambdas: ${{ steps.extract.outputs.lambdas }}
     steps:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
-      - name: Setup Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Compile and package all lambdas
+      - id: extract
+        name: List Dockerfile lambdas folders
         run: |
-          pwd
-          mkdir zips
-          zips_folder=$( cd zips && pwd)
-          echo " - Destination folder for archives is ${zips_folder}"
-
-          projects=$( find ./ -name "package.json" -and -not -path "*/node_modules/*" )
-          for prj_file in ${projects} ; do
-            prj_dir=$( dirname $prj_file )
-            prj_name=$( cat ${prj_file} | jq -r '.name' )
-            
-            echo ""
-            echo ""
-            echo " === NODE PROJECT ${prj_name} IN ${prj_dir}"
-            echo " ===================================================================="
-      
-            if ( [ -f "${prj_dir}/Dockerfile" ] ) then
-              echo " === Start DOCKER build"
-              (
-                echo ""
-                echo " - Enter into project folder"
-                cd ${prj_dir} 
-                pwd 
-
-                echo ""
-                echo " - Lint node code (if configured)"
-                npm ci
-                npm run --if-present lint
-
-                docker build -t ${prj_name} .
+          set -euo pipefail
+          PACKAGES=$(
+              find lambdas -type f -name "Dockerfile" -exec dirname {} \; \
+                | jq -cnR '[inputs]' \
+                | jq -c 'map( { "name": (.| sub(".*/";"")), "folder": .})' \
               )
-            else 
-              echo " === Start NPM build"
-              (
-                echo ""
-                echo " - Enter into project folder"
-                cd ${prj_dir} 
-                pwd 
+          echo "Docker lambdas"
+          echo "$PACKAGES"  | jq '.'
+          echo "lambdas=$PACKAGES" >> $GITHUB_OUTPUT
 
-                echo ""
-                echo " - Download dependencies"
-                npm ci 
+  docker_build_and_push:
+    name: Docker ${{ matrix.lambda.name }}
+    needs: [ list_docker_lambdas, extract_commitid_or_tag_name ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        lambda: ${{ fromJson(needs.list_docker_lambdas.outputs.lambdas) }}
+    env:
+      source_tag: ${{ needs.extract_commitid_or_tag_name.outputs.commitid_or_tag_name  }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
 
-                echo ""
-                echo " - Build project"
-                npm run --if-present lint
-                npm run build 
+      - name: Announce
+        run: echo "Start build docker image for project ${{ matrix.project.folder }} source version ${{ env.source_tag }}"
 
-                echo ""
-                echo " - Package project code"
-                (cd dist && zip -q -r "${zips_folder}/${prj_name}.zip" *) 
+      ### ADD HERE THE DOCKER RELATED BUILDING (and pushing) STEPS
+      
 
-                echo ""
-                echo " - Package runtime libraries"
-                mkdir nodejs 
-                cp package.json package-lock.json nodejs 
-                NODE_ENV=production npm ci --prefix nodejs 
-                zip -q -r "${zips_folder}/${prj_name}-liblayer.zip" nodejs 
-            )
+  ######                               NODE LAMBDAS RELATED JOBS                                ###
+  #################################################################################################
+  list_node_lambdas:
+    runs-on: ubuntu-latest
+    outputs:
+      lambdas: ${{ steps.extract.outputs.lambdas }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+      - id: extract
+        name: List node lambdas folders
+        run: |
+          set -euo pipefail
+          PACKAGES="["
+
+          FOLDERS=$( find lambdas -type f -name "package.json" -exec dirname {} \; )
+          first="true"
+          for f in $FOLDERS
+          do
+            if ( [ -e "$f/Dockerfile" ] ) then
+              has_dockerfile="true"
+            else
+              has_dockerfile="false"
+            fi
+
+            if ( [ "$has_dockerfile" == "false" ] ) then
+              if ( [ "$first" = "false" ] ) then
+                PACKAGES="${PACKAGES},"
+              fi
+
+              PACKAGES="${PACKAGES} {\"name\":\"$( basename $f )\", \"folder\":\"$f\", \"has_dockerfile\":\"$has_dockerfile\"}"
+              first="false"
             fi
           done
+          PACKAGES="${PACKAGES}]"
 
-          echo ""
-          echo " - Produced Docker images"
-          docker images
+          echo "Node lambdas"
+          echo "$PACKAGES" | jq '.'
+          echo "lambdas=$PACKAGES" >> $GITHUB_OUTPUT
 
-          echo ""
-          echo " - Produced Zip Archives ${zips_folder} "
-          ls -1 "${zips_folder}"
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
+  node_build_and_upload_artifact:
+    name: Node ${{ matrix.lambda.name }}
+    needs: [ list_node_lambdas, extract_commitid_or_tag_name ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        lambda: ${{ fromJson(needs.list_node_lambdas.outputs.lambdas) }}
+    env:
+      source_tag: ${{ needs.extract_commitid_or_tag_name.outputs.commitid_or_tag_name  }}
+    steps:
+      - name: Announce
+        run: |
+          echo "Start node build for project in ${{ matrix.project.folder }} source version ${{ env.source_tag }}"
+
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7 # v3
         with:
-          name: all_lambdas__${{ env.artifact_suffix }}
-          path: zips/*.zip
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: ${{ matrix.lambda.folder }}
+        run: npm ci
+
+      - name: Build
+        working-directory: ${{ matrix.lambda.folder }}
+        run: npm run build
+
+      - name: Package lambda code
+        working-directory: ${{ matrix.lambda.folder }}
+        run: |
+          ( cd dist && zip -q -r "../${{ matrix.lambda.name }}.zip" * )
+
+      - name: Package runtime libraries
+        working-directory: ${{ matrix.lambda.folder }}
+        run: |
+          set -euo pipefail
+          mkdir nodejs
+          cp package.json package-lock.json nodejs
+
+          NODE_ENV=production npm ci --prefix nodejs
+          zip -q -r "${{ matrix.lambda.name }}-liblayer.zip" nodejs
+
+      - name: Upload lambda Artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ${{ env.source_tag }}-${{ matrix.lambda.name }}.zip
+          path: ${{ matrix.lambda.folder }}/${{ matrix.lambda.name }}.zip
+
+      - name: Upload lib layer Artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ${{ env.source_tag }}-${{ matrix.lambda.name }}-liblayer.zip
+          path: ${{ matrix.lambda.folder }}/${{ matrix.lambda.name }}-liblayer.zip
+
+
   create_draft_release:
     if: github.ref_type == 'tag'
     name: Create Draft Release
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
-    needs: [ extract-ref, build-all-projects ]
+    needs: [ extract_commitid_or_tag_name, node_build_and_upload_artifact ]
     env:
-      artifact_suffix: ${{ needs.extract-ref.outputs.ref_simple_name }}
+      source_tag: ${{ needs.extract_commitid_or_tag_name.outputs.commitid_or_tag_name }}
     steps:
       - name: Download a single artifact
         uses: actions/download-artifact@v4
         with:
-          name: all_lambdas__${{ env.artifact_suffix }}
+          pattern: ${{ env.source_tag }}-*
+          merge-multiple: true
           path: released_files
       - name: Create draft release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          ls -R released_files/*
           gh -R ${{ github.repository }} release create -d \
              --verify-tag ${{github.ref_name}} \
-             -t ${{github.ref_name}} \
+             -t ${{ env.source_tag }} \
              released_files/*
-
