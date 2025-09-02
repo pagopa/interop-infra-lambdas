@@ -102,9 +102,9 @@ jobs:
 
           FOLDERS=$( find lambdas -type f -name "package.json" -exec dirname {} \; )
           first="true"
-          for f in $FOLDERS
+          for folder in $FOLDERS
           do
-            if ( [ -e "$f/Dockerfile" ] ) then
+            if ( [ -e "$folder/Dockerfile" ] ) then
               has_dockerfile="true"
             else
               has_dockerfile="false"
@@ -115,9 +115,8 @@ jobs:
                 PACKAGES="${PACKAGES},"
               fi
 
-              lambda_name=$( cat "$f/package.json" | jq -r '.name' )
-              #lambda_name=$( basename $f )
-              PACKAGES="${PACKAGES} {\"name\":\"${lambda_name}\", \"folder\":\"$f\", \"has_dockerfile\":\"$has_dockerfile\"}"
+              lambda_name=$( basename $folder )
+              PACKAGES="${PACKAGES} {\"name\":\"${lambda_name}\", \"folder\":\"$folder\", \"has_dockerfile\":\"$has_dockerfile\"}"
               first="false"
             fi
           done
