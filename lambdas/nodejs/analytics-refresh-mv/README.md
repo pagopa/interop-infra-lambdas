@@ -1,0 +1,55 @@
+## Overview
+
+This lambda, when invoked, use RedShift-data-API, to refresh all stale materialized views 
+into schemas listed in the `VIEWS_SCHEMAS_NAMES` environment variables. 
+The refresh are executed sequentially by _level_, view with the same _level_ are refreshed 
+in parallel; the _level_ is defined in the name of the view because __every view name must 
+start with__ `mv_NN_` where __NN__ is the view's _level_
+
+This lambda needs some stored procedure because the RedShift user used by this lambda 
+is not the materialized views owner.
+- list_stale_materialized_views
+- refresh_materialized_view
+- last_mv_refresh_info
+
+
+## Parameters
+This lambda do not get parameters from input event.
+
+All the parameters are read from environment variables:
+- `REDSHIFT_CLUSTER_IDENTIFIER` this lambda work on one database of one cluster;
+- `REDSHIFT_DATABASE_NAME` the database to connect to;
+- `REDSHIFT_DB_USER` database user used for materialized views inspect and refresh;
+- `VIEWS_SCHEMAS_NAMES` a json array of strings where each element is a database 
+  schema to inspect for stale materialized views.
+- `PROCEDURES_SCHEMA` the name of the redshift schema where the procedure are declared.
+
+
+## Algorithm
+The used algorithm is:
+- Connect to the database using ["redshift-data API"](https://docs.aws.amazon.com/redshift/latest/mgmt/data-api.html)
+- List stale materialized views calling stored procedure `list_need_refresh_views` and 
+  listing the result with
+  ```sql
+    SELECT
+      mv_schema, mv_name, mv_level
+    FROM
+      list_need_refresh_views_results
+    ORDER BY
+      mv_level asc,
+      mv_schema asc,
+      mv_name asc
+  ```
+  The `list_need_refresh_views_results` table is temporary: the two statement must be 
+  executed in the same session.
+  - The procedure It is based on the naming convention `mv_NN_...` where NN is the 
+    _refresh order_: views with lower NN must be refreshed first. 
+- Group and sort materialized views by `mv_level` column.
+- Execute refresh materialized views calling `refresh_materialized_view` procedure in 
+  parallel using node [`Promise.all`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/all) function.
+- After all refresh, the lambda, call procedure `list_need_refresh_views` to update 
+  table `list_need_refresh_views_results` containing refresh timestamps. This table 
+  is used by QuickSight dashboards.
+
+## Local execution
+Set environment variables values in `.env` file and execute `npm run local`
