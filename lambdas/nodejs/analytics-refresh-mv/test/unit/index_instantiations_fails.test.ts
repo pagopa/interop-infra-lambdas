@@ -19,6 +19,15 @@ vi.mock('../../src/groupMaterializedViews', () => ({
 }));
 
 // 2. Mock the wrapper classes and their methods
+const mockIsAvailable = vi.fn();
+vi.mock('../../src/RedshiftClusterChecker', () => {
+  return {
+    RedshiftClusterChecker: vi.fn().mockImplementation(() => ({
+      isAvailable: mockIsAvailable,
+    })),
+  };
+});
+
 vi.mock('../../src/RedshiftDataWrapper', );
 
 const mockListStaleMaterializedViews = vi.fn();
@@ -72,6 +81,7 @@ describe('Lambda Handler', () => {
   // --- INSTANTIATION FAILURE SCENARIO TESTS ---
   it('should throw an error if RedshiftDataWrapper cannot be instantiated', async () => {
     // ARRANGE
+    mockIsAvailable.mockResolvedValue(true);
     const mockRedshiftDataWrapper = vi.mocked(RedshiftDataWrapper);
     mockRedshiftDataWrapper.mockImplementationOnce(() => {
       throw new Error("missing argument");
@@ -83,6 +93,7 @@ describe('Lambda Handler', () => {
 
   it('should throw an error if MaterializedViewHelper cannot be instantiated', async () => {
     // ARRANGE
+    mockIsAvailable.mockResolvedValue(true);
     const mockMaterializedViewHelper = vi.mocked(MaterializedViewHelper);
     mockMaterializedViewHelper.mockImplementationOnce(() => {
       throw new Error("missing argument");

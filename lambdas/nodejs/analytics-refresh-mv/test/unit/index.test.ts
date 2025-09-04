@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MaterializedViewHelper, ViewAndLevel } from '../../src/MaterializedViewHelper';
 import { RedshiftDataWrapper } from '../../src/RedshiftDataWrapper';
+import { RedshiftClusterChecker } from '../../src/RedshiftClusterChecker';
 
 
 // --- MOCK SETUP ---
@@ -28,6 +29,15 @@ vi.mock('../../src/MaterializedViewHelper', () => {
       listStaleMaterializedViews: mockListStaleMaterializedViews,
       refreshOneMaterializedView: mockRefreshOneMaterializedView,
       updateLastMvRefreshInfo: mockUpdateLastMvRefreshInfo,
+    })),
+  };
+});
+
+const mockIsAvailable = vi.fn();
+vi.mock('../../src/RedshiftClusterChecker', () => {
+  return {
+    RedshiftClusterChecker: vi.fn().mockImplementation(() => ({
+      isAvailable: mockIsAvailable,
     })),
   };
 });
@@ -76,6 +86,7 @@ describe('Lambda Handler', () => {
     process.env.REDSHIFT_DB_USER = 'test-user';
 
     // 2. Configure mock return values
+    mockIsAvailable.mockResolvedValue(true);
     mockListStaleMaterializedViews.mockResolvedValue([...MOCK_VIEWS_LEVEL_1, ...MOCK_VIEWS_LEVEL_2]);
     mockGroupMaterializedViews.mockReturnValue([MOCK_VIEWS_LEVEL_1, MOCK_VIEWS_LEVEL_2]);
     mockRefreshOneMaterializedView.mockResolvedValue('refreshed');
@@ -115,6 +126,7 @@ describe('Lambda Handler', () => {
     process.env.VIEWS_SCHEMAS_NAMES = '[]';
     process.env.PROCEDURES_SCHEMA = 'procs';
     const listError = new Error('Redshift API error');
+    mockIsAvailable.mockResolvedValue(true);
     mockListStaleMaterializedViews.mockRejectedValue(listError);
 
     // ACT & ASSERT
@@ -126,6 +138,7 @@ describe('Lambda Handler', () => {
     process.env.VIEWS_SCHEMAS_NAMES = '[]';
     process.env.PROCEDURES_SCHEMA = 'procs';
     const refreshError = new Error('Timeout while refreshing');
+    mockIsAvailable.mockResolvedValue(true);
     mockListStaleMaterializedViews.mockResolvedValue([ ...MOCK_VIEWS_LEVEL_1 ]);
     mockGroupMaterializedViews.mockReturnValue([MOCK_VIEWS_LEVEL_1]); // Provide views to refresh
     mockRefreshOneMaterializedView.mockRejectedValue(refreshError);
@@ -140,6 +153,7 @@ describe('Lambda Handler', () => {
     process.env.VIEWS_SCHEMAS_NAMES = '["a"]';
     process.env.PROCEDURES_SCHEMA = 'procs';
     const updateError = new Error('Cannot update table');
+    mockIsAvailable.mockResolvedValue(true);
     mockListStaleMaterializedViews.mockResolvedValue([]);
     mockGroupMaterializedViews.mockReturnValue([]); // No views to refresh, proceed to final step
     mockUpdateLastMvRefreshInfo.mockRejectedValue(updateError);
