@@ -34,7 +34,9 @@ vi.mock('../../src/MaterializedViewHelper', () => {
   };
 });
 
-
+process.env.VIEWS_SCHEMAS_NAMES = '[]';
+process.env.PROCEDURES_SCHEMA = 'procs';
+    
 // --- TEST SUITE ---
 describe('Lambda Handler', () => {
   // Store original process.env
