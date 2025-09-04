@@ -7,7 +7,8 @@
     "node": "24"
   },
   "scripts": {
-    "test": "echo \"NO TEST IMPLEMENTED\" && exit 0",
+    "test": "npm run test:unit",
+    "test:unit": "vitest run --config vitest.unit.config.ts --coverage",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "build": "tsc",
@@ -23,7 +24,9 @@
     "dotenv-flow": "^4.1.0",
     "eslint": "^9.32.0",
     "typescript": "^5.8.3",
-    "typescript-eslint": "^8.38.0"
+    "typescript-eslint": "^8.38.0",
+    "vitest": "^3.2.4",
+    "@vitest/coverage-istanbul": "^3.2.4",
   },
   "dependencies": {
     "@aws-sdk/client-redshift-data": "^3.609.0"

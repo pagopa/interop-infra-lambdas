@@ -1,5 +1,5 @@
-import { RedshiftDataWrapper } from "./RedshiftDataWrapper";
-import { assertAlphanumericNotEmpty } from "./utils";
+import { IRedshiftDataWrapper } from "./IRedshiftDataWrapper";
+import { assertAlphanumericNotEmptyAndTrim } from "./utils";
 
 export type ViewAndLevel = {
     mvSchemaName: string;
@@ -10,19 +10,19 @@ export type ViewAndLevel = {
 
 export class MaterializedViewHelper {
   
-  #redshiftWrapper: RedshiftDataWrapper;
+  #redshiftWrapper: IRedshiftDataWrapper;
   #viewsSchemas: string[];
   #proceduresSchema: string;
   
   constructor(
-    redshiftWrapper: RedshiftDataWrapper,
+    redshiftWrapper: IRedshiftDataWrapper,
     viewsSchemas: string[],
     proceduresSchema: string| undefined,
   ) 
   {
     this.#redshiftWrapper = redshiftWrapper;
     this.#viewsSchemas = viewsSchemas;
-    this.#proceduresSchema = assertAlphanumericNotEmpty( proceduresSchema, "proceduresSchema" );
+    this.#proceduresSchema = assertAlphanumericNotEmptyAndTrim( proceduresSchema, "proceduresSchema" );
   }
 
   async listStaleMaterializedViews(): Promise<ViewAndLevel[]> {

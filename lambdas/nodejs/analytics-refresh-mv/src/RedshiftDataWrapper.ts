@@ -1,10 +1,9 @@
 import { GetStatementResultCommandOutput, RedshiftData, SqlParameter } from '@aws-sdk/client-redshift-data';
 import { StatementError } from './StatementError';
-import { assertNotEmpty } from './utils';
+import { assertNotEmptyAndTrim } from './utils';
+import { IRedshiftDataWrapper, ObjectWithStringValues } from './IRedshiftDataWrapper';
 
-export type ObjectWithStringValues = { [key:string]: string | undefined };
-
-export class RedshiftDataWrapper {
+export class RedshiftDataWrapper implements IRedshiftDataWrapper {
   
   #redshift: RedshiftData;
   #redshiftClusterIdentifier: string;
@@ -17,13 +16,19 @@ export class RedshiftDataWrapper {
       redshiftDatabaseUserName: string | undefined
     ) 
   {
-    this.#redshiftClusterIdentifier = assertNotEmpty( redshiftClusterIdentifier, "redshiftClusterIdentifier" );
-    this.#redshiftDatabaseName = assertNotEmpty( redshiftDatabaseName, "redshiftDatabaseName" );
-    this.#redshiftDatabaseUserName = assertNotEmpty( redshiftDatabaseUserName, "redshiftDatabaseUserName" );
+    this.#redshiftClusterIdentifier = assertNotEmptyAndTrim( redshiftClusterIdentifier, "redshiftClusterIdentifier" );
+    this.#redshiftDatabaseName = assertNotEmptyAndTrim( redshiftDatabaseName, "redshiftDatabaseName" );
+    this.#redshiftDatabaseUserName = assertNotEmptyAndTrim( redshiftDatabaseUserName, "redshiftDatabaseUserName" );
     this.#redshift = new RedshiftData({});
 
   }
   
+  /**
+   * Execute a list of statements, in the same session, and fetch the results, when present.
+   * @param statements the sql instruction to execute.
+   * @returns An array of results, null if the statement with same index do not have result sets. 
+   * An empty resultSet is a result.
+   */
   async executeSqlStatementsWithData( statements: { sql: string, parameters: ObjectWithStringValues}[] ) {
     const results: (GetStatementResultCommandOutput | null)[] = [];
 
