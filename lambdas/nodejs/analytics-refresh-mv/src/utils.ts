@@ -1,7 +1,7 @@
 
 export function assertNotEmptyAndTrim( val: string | undefined, name: string) {
   
-  if ( !val || ( typeof val == "string" && !val.trim()) ) {
+  if ( !val || !val.trim() ) {
     const message = name + " can't be empty";
     console.error(message);
     throw new Error(message);

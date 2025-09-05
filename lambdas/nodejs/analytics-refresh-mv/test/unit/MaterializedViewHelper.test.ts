@@ -115,6 +115,29 @@ describe('MaterializedViewHelper', () => {
       // ACT & ASSERT
       await expect(helper.listStaleMaterializedViews()).rejects.toThrow('some field is missing or null');
     });
+
+    it('should throw an error if the list query do not return information', async () => {
+      // ARRANGE: A record is missing the `longValue` for mvLevel
+      const malformedResponse = [
+        null,
+      ];
+      mockExecuteSqlStatementsWithData.mockResolvedValue(malformedResponse);
+
+      // ACT & ASSERT
+      await expect(helper.listStaleMaterializedViews()).rejects.toThrow('Listing query expected to return a result set');
+    });
+
+    it('should throw an error if the list query do not return a result set', async () => {
+      // ARRANGE: A record is missing the `longValue` for mvLevel
+      const malformedResponse = [
+        null,
+        null
+      ];
+      mockExecuteSqlStatementsWithData.mockResolvedValue(malformedResponse);
+
+      // ACT & ASSERT
+      await expect(helper.listStaleMaterializedViews()).rejects.toThrow('Listing query expected to return a result set');
+    });
   });
 
   describe('refreshOneMaterializedView', () => {

@@ -16,7 +16,7 @@ export class RedshiftClusterChecker {
     const command = new DescribeClustersCommand({ ClusterIdentifier: this.#redshiftClusterIdentifier });
     const response = await this.#redshift.send(command);
     
-    const cluster: Cluster | undefined = response?.Clusters?.[0];
+    const cluster: Cluster | undefined = response.Clusters?.[0];
 
     if( cluster ) {
       console.log(`Cluster ${this.#redshiftClusterIdentifier} has status ${cluster.ClusterStatus}`)

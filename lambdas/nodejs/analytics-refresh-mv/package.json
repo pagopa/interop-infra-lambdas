@@ -9,6 +9,7 @@
   "scripts": {
     "test": "npm run test:unit",
     "test:unit": "vitest run --config vitest.unit.config.ts --coverage",
+    "mutation-testing": "npx stryker run",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "build": "tsc",
@@ -20,6 +21,9 @@
   "license": "ISC",
   "devDependencies": {
     "@eslint/js": "^9.32.0",
+    "@stryker-mutator/core": "^9.1.1",
+    "@stryker-mutator/typescript-checker": "^9.1.1",
+    "@stryker-mutator/vitest-runner": "^9.1.1",
     "@types/node": "^20.14.9",
     "@vitest/coverage-istanbul": "^3.2.4",
     "dotenv-flow": "^4.1.0",

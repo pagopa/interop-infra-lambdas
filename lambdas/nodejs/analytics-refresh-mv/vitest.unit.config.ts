@@ -13,6 +13,7 @@ export default defineConfig({
     coverage: {
       provider: 'istanbul',
       reporter: ['html'],
+      reportsDirectory: 'reports/coverage',
       include: ['src/**/*.ts'],
 
       // Set coverage thresholds

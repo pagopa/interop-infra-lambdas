@@ -51,9 +51,10 @@ export class MaterializedViewHelper {
     const commandsResults = await this.#redshiftWrapper.executeSqlStatementsWithData( LIST_MV_VIEWS );
     const result : ViewAndLevel[] = []
     
-    if( commandsResults && commandsResults.length > 0 && commandsResults[1] && commandsResults[1].Records ) {
+    const records = commandsResults[1]?.Records;
+    if( records ) {
 
-      commandsResults[1].Records.forEach(rec => {
+      records.forEach(rec => {
   
         const mvSchemaName = rec[0].stringValue;
         const mvName = rec[1].stringValue;
@@ -64,6 +65,9 @@ export class MaterializedViewHelper {
         const oneView = { mvSchemaName, mvName, mvLevel };
         result.push( oneView );
       })
+    }
+    else {
+      throw new Error("Listing query expected to return a result set");
     }
     return result;
   }
