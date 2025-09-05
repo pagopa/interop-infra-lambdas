@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MaterializedViewHelper, ViewAndLevel } from '../../src/MaterializedViewHelper';
 import { RedshiftDataWrapper } from '../../src/RedshiftDataWrapper';
-import { RedshiftClusterChecker } from '../../src/RedshiftClusterChecker';
 
 
 // --- MOCK SETUP ---
@@ -133,6 +132,18 @@ describe('Lambda Handler', () => {
     await expect(handler()).rejects.toThrow("Error listing materialized views\nError: Redshift API error");
   });
 
+  it('should return "Aborted" if listing stale views fail and the redshift cluster is not available', async () => {
+    // ARRANGE
+    process.env.VIEWS_SCHEMAS_NAMES = '[]';
+    process.env.PROCEDURES_SCHEMA = 'procs';
+    const listError = new Error('Redshift API error');
+    mockIsAvailable.mockResolvedValue(false);
+    mockListStaleMaterializedViews.mockRejectedValue(listError);
+
+    // ACT & ASSERT
+    await expect(handler()).resolves.toBe("Aborted");
+  });
+
   it('should throw if refreshing a view fails', async () => {
     // ARRANGE
     process.env.VIEWS_SCHEMAS_NAMES = '[]';
@@ -145,6 +156,20 @@ describe('Lambda Handler', () => {
 
     // ACT & ASSERT
     await expect(handler()).rejects.toThrow("Error refreshing views\nError: Timeout while refreshing");
+  });
+
+  it('should return "Aborted" if refreshing a view fails and the redshift cluster is not available', async () => {
+    // ARRANGE
+    process.env.VIEWS_SCHEMAS_NAMES = '[]';
+    process.env.PROCEDURES_SCHEMA = 'procs';
+    const refreshError = new Error('Timeout while refreshing');
+    mockIsAvailable.mockResolvedValue(false);
+    mockListStaleMaterializedViews.mockResolvedValue([ ...MOCK_VIEWS_LEVEL_1 ]);
+    mockGroupMaterializedViews.mockReturnValue([MOCK_VIEWS_LEVEL_1]); // Provide views to refresh
+    mockRefreshOneMaterializedView.mockRejectedValue(refreshError);
+
+    // ACT & ASSERT
+    await expect(handler()).resolves.toBe("Aborted");
   });
   
   it('should throw if updating the last refresh info fails', async () => {
@@ -161,4 +186,20 @@ describe('Lambda Handler', () => {
     // ACT & ASSERT
     await expect(handler()).rejects.toThrow('Error refreshing information about materialized views refresh\nError: Cannot update table');
   });
+
+  it('should return "Aborted" if updating the last refresh info fails and the redshift cluster is not available', async () => {
+    // ARRANGE
+    
+    process.env.VIEWS_SCHEMAS_NAMES = '["a"]';
+    process.env.PROCEDURES_SCHEMA = 'procs';
+    const updateError = new Error('Cannot update table');
+    mockIsAvailable.mockResolvedValue(false);
+    mockListStaleMaterializedViews.mockResolvedValue([]);
+    mockGroupMaterializedViews.mockReturnValue([]); // No views to refresh, proceed to final step
+    mockUpdateLastMvRefreshInfo.mockRejectedValue(updateError);
+
+    // ACT & ASSERT
+    await expect(handler()).resolves.toBe("Aborted")
+  });
+
 });

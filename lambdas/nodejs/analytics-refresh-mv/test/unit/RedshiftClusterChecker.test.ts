@@ -4,6 +4,9 @@ import { RedshiftClient, DescribeClustersCommand } from '@aws-sdk/client-redshif
 
 // --- Mocks Setup ---
 
+// We spy on console.error to ensure it's called without polluting test logs.
+vi.spyOn(console, 'error').mockImplementation(() => {});
+
 // Mock the entire AWS SDK Redshift client module.
 // This allows us to control the behavior of the RedshiftClient and its 'send' method.
 const mockSend = vi.fn();

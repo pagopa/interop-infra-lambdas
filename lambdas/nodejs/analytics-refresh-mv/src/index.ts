@@ -73,7 +73,7 @@ exports.handler = async function () {
     }
     else {
       console.warn("Exiting because Redshift Cluster is down");
-      return;
+      return "Aborted";
     }
   }
   
@@ -93,7 +93,7 @@ exports.handler = async function () {
       }
       else {
         console.warn("Exiting because Redshift Cluster is down");
-        return;
+        return "Aborted";
       }
     } 
   }
@@ -107,7 +107,7 @@ exports.handler = async function () {
     }
     else {
       console.warn("Exiting because Redshift Cluster is down");
-      return;
+      return "Aborted";
     }
   }
 

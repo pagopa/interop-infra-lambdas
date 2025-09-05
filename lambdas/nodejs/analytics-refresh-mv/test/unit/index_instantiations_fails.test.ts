@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MaterializedViewHelper, ViewAndLevel } from '../../src/MaterializedViewHelper';
 import { RedshiftDataWrapper } from '../../src/RedshiftDataWrapper';
+import { RedshiftClusterChecker } from '../../src/RedshiftClusterChecker';
 
 // N.B.: This file is separated from index.test.ts because the use of mockImplementation 
 //       on RedshiftDataWrapper and MaterializedViewHelper interfere with others tests.
@@ -79,6 +80,18 @@ describe('Lambda Handler', () => {
   ];
 
   // --- INSTANTIATION FAILURE SCENARIO TESTS ---
+  it('should throw an error if RedshiftClusterChecker cannot be instantiated', async () => {
+    // ARRANGE
+    mockIsAvailable.mockResolvedValue(true);
+    const mockRedshiftClusterChecker = vi.mocked(RedshiftClusterChecker);
+    mockRedshiftClusterChecker.mockImplementationOnce(() => {
+      throw new Error("missing argument");
+    });
+
+    // ACT & ASSERT
+    await expect(handler()).rejects.toThrow("Error creating Redshift API client\nError: missing argument");
+  });
+
   it('should throw an error if RedshiftDataWrapper cannot be instantiated', async () => {
     // ARRANGE
     mockIsAvailable.mockResolvedValue(true);
