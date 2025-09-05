@@ -53,3 +53,6 @@ The used algorithm is:
 
 ## Local execution
 Set environment variables values in `.env` file and execute `npm run local`
+
+## Test Testing (mutation testing)
+npm run mutation-testing
