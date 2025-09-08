@@ -12,6 +12,11 @@ is not the materialized views owner.
 - refresh_materialized_view
 - last_mv_refresh_info
 
+If the redshift cluster is not available the lambda abort materialized views refresh  
+without throw error. This feature is needed to do not pollute the alarms during maintenance
+windows. The available condition is defined as `cluster.ClusterStatus === "available"` on 
+the result of [DescribeClusters API](https://docs.aws.amazon.com/cli/latest/reference/redshift/describe-clusters.html).
+
 
 ## Parameters
 This lambda do not get parameters from input event.
