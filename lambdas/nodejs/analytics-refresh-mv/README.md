@@ -61,3 +61,5 @@ Set environment variables values in `.env` file and execute `npm run local`
 
 ## Test Testing (mutation testing)
 npm run mutation-testing
+
+Mutation reports, and test coverage reports, are saved into `reports/` lambda subfolder.
