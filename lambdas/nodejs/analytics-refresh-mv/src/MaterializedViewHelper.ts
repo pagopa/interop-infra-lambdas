@@ -1,5 +1,5 @@
-import { RedshiftDataWrapper } from "./RedshiftDataWrapper";
-import { assertAlphanumericNotEmpty } from "./utils";
+import { IRedshiftDataWrapper } from "./IRedshiftDataWrapper";
+import { assertAlphanumericNotEmptyAndTrim } from "./utils";
 
 export type ViewAndLevel = {
     mvSchemaName: string;
@@ -10,19 +10,19 @@ export type ViewAndLevel = {
 
 export class MaterializedViewHelper {
   
-  #redshiftWrapper: RedshiftDataWrapper;
+  #redshiftWrapper: IRedshiftDataWrapper;
   #viewsSchemas: string[];
   #proceduresSchema: string;
   
   constructor(
-    redshiftWrapper: RedshiftDataWrapper,
+    redshiftWrapper: IRedshiftDataWrapper,
     viewsSchemas: string[],
     proceduresSchema: string| undefined,
   ) 
   {
     this.#redshiftWrapper = redshiftWrapper;
     this.#viewsSchemas = viewsSchemas;
-    this.#proceduresSchema = assertAlphanumericNotEmpty( proceduresSchema, "proceduresSchema" );
+    this.#proceduresSchema = assertAlphanumericNotEmptyAndTrim( proceduresSchema, "proceduresSchema" );
   }
 
   async listStaleMaterializedViews(): Promise<ViewAndLevel[]> {
@@ -51,9 +51,10 @@ export class MaterializedViewHelper {
     const commandsResults = await this.#redshiftWrapper.executeSqlStatementsWithData( LIST_MV_VIEWS );
     const result : ViewAndLevel[] = []
     
-    if( commandsResults && commandsResults.length > 0 && commandsResults[1] && commandsResults[1].Records ) {
+    const records = commandsResults[1]?.Records;
+    if( records ) {
 
-      commandsResults[1].Records.forEach(rec => {
+      records.forEach(rec => {
   
         const mvSchemaName = rec[0].stringValue;
         const mvName = rec[1].stringValue;
@@ -64,6 +65,9 @@ export class MaterializedViewHelper {
         const oneView = { mvSchemaName, mvName, mvLevel };
         result.push( oneView );
       })
+    }
+    else {
+      throw new Error("Listing query expected to return a result set");
     }
     return result;
   }
