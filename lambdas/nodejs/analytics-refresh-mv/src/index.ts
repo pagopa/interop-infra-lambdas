@@ -100,7 +100,7 @@ exports.handler = async function () {
 
   // - Update last refresh info table, useful for quicksight user.
   try {
-    const updated = await materializedViewHelper.updateLastMvRefreshInfo();
+    await materializedViewHelper.updateLastMvRefreshInfo();
   } catch (error) {
     if( await redshiftClusterChecker.isAvailable() ) {
       throw logAndRethrow(ERROR_MESSAGES.REDSHIFT_UPDATE_LAST_REFRESH_INFO_ERROR(), error );
@@ -111,6 +111,7 @@ exports.handler = async function () {
     }
   }
 
+  return "Refresh Completed"
 };
 
 
