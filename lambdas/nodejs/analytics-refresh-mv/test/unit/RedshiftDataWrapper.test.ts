@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RedshiftDataWrapper } from '../../src/RedshiftDataWrapper';
 import { StatementError } from '../../src/StatementError';
-import { RedshiftData } from '@aws-sdk/client-redshift-data';
 
 // --- Mock Setup ---
 // We create mock functions for each method on RedshiftData that our class uses.
