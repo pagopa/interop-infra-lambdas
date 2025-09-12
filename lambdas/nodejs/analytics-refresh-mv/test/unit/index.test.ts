@@ -1,12 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { MaterializedViewHelper, ViewAndLevel } from '../../src/MaterializedViewHelper';
+import { MaterializedViewHelper } from '../../src/MaterializedViewHelper';
 import { RedshiftDataWrapper } from '../../src/RedshiftDataWrapper';
+import { ViewAndLevel } from '../../src/ViewAndLevel';
 
 
 // --- MOCK SETUP ---
 
 // We spy on console.error to ensure it's called without polluting test logs.
 vi.spyOn(console, 'error').mockImplementation(() => {});
+vi.spyOn(console, 'warn').mockImplementation(() => {});
+vi.spyOn(console, 'log').mockImplementation(() => {});
 
 // Mock all dependencies before they are imported by the handler.
 
@@ -31,6 +34,16 @@ vi.mock('../../src/MaterializedViewHelper', () => {
     })),
   };
 });
+
+const mockFilterAll = vi.fn().mockImplementation( (v) => v );
+vi.mock('../../src/StaleMaterializedViewFilter', () => {
+  return {
+    StaleMaterializedViewFilter: vi.fn().mockImplementation(() => ({
+      filterAll: mockFilterAll
+    })),
+  };
+});
+
 
 const mockIsAvailable = vi.fn();
 vi.mock('../../src/RedshiftClusterChecker', () => {
@@ -66,12 +79,19 @@ describe('Lambda Handler', () => {
   });
 
   // --- Mock Data ---
+  const ancillaryData = { 
+    incrementalRefreshNotSupported: false, 
+    lastRefreshStartTimeEpoch: 0, 
+    lastRefreshEndTimeEpoch: 1000, 
+    lastRefreshStartTime: "Start time", 
+    lastRefreshEndTime: "End time", 
+  }
   const MOCK_VIEWS_LEVEL_1: ViewAndLevel[] = [
-    { mvSchemaName: 's1', mvName: 'view_a', mvLevel: 1 },
-    { mvSchemaName: 's1', mvName: 'view_b', mvLevel: 1 },
+    { mvSchemaName: 's1', mvName: 'view_a', mvLevel: 1, ...ancillaryData },
+    { mvSchemaName: 's1', mvName: 'view_b', mvLevel: 1, ...ancillaryData },
   ];
   const MOCK_VIEWS_LEVEL_2: ViewAndLevel[] = [
-    { mvSchemaName: 's2', mvName: 'view_c', mvLevel: 2 },
+    { mvSchemaName: 's2', mvName: 'view_c', mvLevel: 2, ...ancillaryData },
   ];
 
   // --- HAPPY PATH TEST ---
@@ -92,13 +112,14 @@ describe('Lambda Handler', () => {
     mockUpdateLastMvRefreshInfo.mockResolvedValue('updated');
 
     // ACT
-    await handler();
+    const result = await handler();
 
     // ASSERT
     // Verify the sequence of calls
     expect(RedshiftDataWrapper).toHaveBeenCalledWith('test-cluster', 'test-db', 'test-user');
     expect(MaterializedViewHelper).toHaveBeenCalledWith(expect.any(RedshiftDataWrapper), ['schema1', 'schema2'], 'procs');
     expect(mockListStaleMaterializedViews).toHaveBeenCalledOnce();
+    expect(mockFilterAll).toHaveBeenCalledOnce();
     expect(mockGroupMaterializedViews).toHaveBeenCalledOnce();
     
     // Check that refresh was called for each view (3 views in total)
@@ -108,6 +129,8 @@ describe('Lambda Handler', () => {
     expect(mockRefreshOneMaterializedView).toHaveBeenCalledWith('s2', 'view_c');
     
     expect(mockUpdateLastMvRefreshInfo).toHaveBeenCalledOnce();
+
+    expect(result).toBe("Refresh Completed");
   });
 
   // --- FAILURE SCENARIO TESTS ---
@@ -172,7 +195,7 @@ describe('Lambda Handler', () => {
     await expect(handler()).resolves.toBe("Aborted");
   });
   
-  it('should throw if updating the last refresh info fails', async () => {
+  it('should skip updating the last refresh info if no materialized views are refreshed', async () => {
     // ARRANGE
     
     process.env.VIEWS_SCHEMAS_NAMES = '["a"]';
@@ -180,7 +203,32 @@ describe('Lambda Handler', () => {
     const updateError = new Error('Cannot update table');
     mockIsAvailable.mockResolvedValue(true);
     mockListStaleMaterializedViews.mockResolvedValue([]);
-    mockGroupMaterializedViews.mockReturnValue([]); // No views to refresh, proceed to final step
+    mockGroupMaterializedViews.mockReturnValue([]); // No views to refresh, skip final step
+    mockUpdateLastMvRefreshInfo.mockRejectedValue(updateError);
+
+    // ACT
+    const result = await handler();
+
+    // ASSERT
+    // Verify the sequence of calls
+    expect(mockListStaleMaterializedViews).toHaveBeenCalledOnce();
+    expect(mockFilterAll).toHaveBeenCalledOnce();
+    expect(mockGroupMaterializedViews).toHaveBeenCalledOnce();
+    expect(mockRefreshOneMaterializedView).toHaveBeenCalledTimes( 0 );
+    expect(mockUpdateLastMvRefreshInfo).toHaveBeenCalledTimes( 0 );
+    expect(result).toBe("Refresh Completed, no refresh done!");
+  });
+
+  it('should throw if updating the last refresh info fails', async () => {
+    // ARRANGE
+    
+    process.env.VIEWS_SCHEMAS_NAMES = '["a"]';
+    process.env.PROCEDURES_SCHEMA = 'procs';
+    const updateError = new Error('Cannot update table');
+    mockIsAvailable.mockResolvedValue(true);
+    mockListStaleMaterializedViews.mockResolvedValue( MOCK_VIEWS_LEVEL_2 );
+    mockGroupMaterializedViews.mockReturnValue([ MOCK_VIEWS_LEVEL_2 ]);
+    mockRefreshOneMaterializedView.mockResolvedValue('refreshed');
     mockUpdateLastMvRefreshInfo.mockRejectedValue(updateError);
 
     // ACT & ASSERT
@@ -194,8 +242,9 @@ describe('Lambda Handler', () => {
     process.env.PROCEDURES_SCHEMA = 'procs';
     const updateError = new Error('Cannot update table');
     mockIsAvailable.mockResolvedValue(false);
-    mockListStaleMaterializedViews.mockResolvedValue([]);
-    mockGroupMaterializedViews.mockReturnValue([]); // No views to refresh, proceed to final step
+    mockListStaleMaterializedViews.mockResolvedValue( MOCK_VIEWS_LEVEL_2 );
+    mockGroupMaterializedViews.mockReturnValue([ MOCK_VIEWS_LEVEL_2 ]);
+    mockRefreshOneMaterializedView.mockResolvedValue('refreshed');
     mockUpdateLastMvRefreshInfo.mockRejectedValue(updateError);
 
     // ACT & ASSERT

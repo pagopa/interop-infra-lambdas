@@ -28,7 +28,15 @@ All the parameters are read from environment variables:
 - `VIEWS_SCHEMAS_NAMES` a json array of strings where each element is a database 
   schema to inspect for stale materialized views.
 - `PROCEDURES_SCHEMA` the name of the redshift schema where the procedure are declared.
-
+- `INCREMENTAL_MV_MIN_INTERVAL`, this optional parameter contain the minimum number of seconds 
+   between two refresh of the same materialized view. This parameter apply to materialized views 
+   that are refreshed incrementally. If not given default value is 0.
+- `NOT_INCREMENTAL_MV_MIN_INTERVAL`, this optional parameter contain the minimum number of seconds 
+   between two refresh of the same materialized view. This parameter apply to materialized views 
+   that are refreshed with full recalculation and materialized views with refresh issues. If not 
+   given default value is 0. Technically this parameter is used for every materialized view with 
+   `state` field of table [SVV_MV_INFO](https://docs.aws.amazon.com/redshift/latest/dg/r_SVV_MV_INFO.html)
+   not equal to 1.
 
 ## Algorithm
 The used algorithm is:
@@ -37,7 +45,12 @@ The used algorithm is:
   listing the result with
   ```sql
     SELECT
-      mv_schema, mv_name, mv_level
+      mv_schema, mv_name, mv_level,
+      incremental_refresh_not_supported, 
+      last_refresh_start_time, 
+      last_refresh_end_time,
+      last_refresh_start_time_epoch,
+      last_refresh_end_time_epoch
     FROM
       list_need_refresh_views_results
     ORDER BY

@@ -7,3 +7,10 @@ REDSHIFT_DB_USER="dev_mv_refresher_user"
 
 VIEWS_SCHEMAS_NAMES='["views", "sub_views"]'
 PROCEDURES_SCHEMA="sub_views"
+
+# ### optional parameters
+# - Minimum interval between two refresh of the same view; applied to incremental refresh views
+# INCREMENTAL_MV_MIN_INTERVAL="120" # 2 minutes
+# - Minimum interval between two refresh of the same view; applied to not incremental views.
+#   Not incremental refresh means: full refresh views and not refresh-able views.
+# NOT_INCREMENTAL_MV_MIN_INTERVAL="900" # 15 minutes

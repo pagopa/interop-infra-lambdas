@@ -1,4 +1,4 @@
-import { ViewAndLevel } from "./MaterializedViewHelper";
+import { ViewAndLevel } from "./ViewAndLevel";
 import { intToStringWithZeroPadding } from "./utils";
 
 // - Group by level
@@ -19,7 +19,10 @@ export function groupMaterializedViews( infos: ViewAndLevel[]): ViewAndLevel[][]
   })
 
   const grouped: ViewAndLevel[][] = [];
-  for( const key of Object.keys( tmp).sort() ) {
+  const sortedLevelKeys = Object.keys( tmp ).sort();
+  console.log(" - Stale levels array is ", sortedLevelKeys );
+
+  for( const key of sortedLevelKeys ) {
     grouped.push( tmp[key] )
   }
   return grouped;

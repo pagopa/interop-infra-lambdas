@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { MaterializedViewHelper, ViewAndLevel } from '../../src/MaterializedViewHelper';
+import { MaterializedViewHelper } from '../../src/MaterializedViewHelper';
 import { RedshiftDataWrapper } from '../../src/RedshiftDataWrapper';
 import { RedshiftClusterChecker } from '../../src/RedshiftClusterChecker';
+import { ViewAndLevel } from '../../src/ViewAndLevel';
 
 // N.B.: This file is separated from index.test.ts because the use of mockImplementation 
 //       on RedshiftDataWrapper and MaterializedViewHelper interfere with others tests.
@@ -10,6 +11,8 @@ import { RedshiftClusterChecker } from '../../src/RedshiftClusterChecker';
 
 // We spy on console.error to ensure it's called without polluting test logs.
 vi.spyOn(console, 'error').mockImplementation(() => {});
+vi.spyOn(console, 'log').mockImplementation(() => {});
+
 
 // Mock all dependencies before they are imported by the handler.
 
@@ -71,12 +74,19 @@ describe('Lambda Handler', () => {
   });
 
   // --- Mock Data ---
+  const ancillaryData = { 
+    incrementalRefreshNotSupported: false, 
+    lastRefreshStartTimeEpoch: 0, 
+    lastRefreshEndTimeEpoch: 1000, 
+    lastRefreshStartTime: "Start time", 
+    lastRefreshEndTime: "End time", 
+  }
   const MOCK_VIEWS_LEVEL_1: ViewAndLevel[] = [
-    { mvSchemaName: 's1', mvName: 'view_a', mvLevel: 1 },
-    { mvSchemaName: 's1', mvName: 'view_b', mvLevel: 1 },
+    { mvSchemaName: 's1', mvName: 'view_a', mvLevel: 1, ... ancillaryData },
+    { mvSchemaName: 's1', mvName: 'view_b', mvLevel: 1, ... ancillaryData },
   ];
   const MOCK_VIEWS_LEVEL_2: ViewAndLevel[] = [
-    { mvSchemaName: 's2', mvName: 'view_c', mvLevel: 2 },
+    { mvSchemaName: 's2', mvName: 'view_c', mvLevel: 2, ... ancillaryData },
   ];
 
   // --- INSTANTIATION FAILURE SCENARIO TESTS ---

@@ -1,8 +1,10 @@
 import { groupMaterializedViews } from './groupMaterializedViews';
-import { MaterializedViewHelper, ViewAndLevel } from './MaterializedViewHelper';
+import { MaterializedViewHelper } from './MaterializedViewHelper';
 import { RedshiftClusterChecker } from './RedshiftClusterChecker';
 import { RedshiftDataWrapper } from './RedshiftDataWrapper';
+import { StaleMaterializedViewFilter } from './StaleMaterializedViewFilter';
 import { logAndRethrow, parseSchemaList } from './utils';
+import { ViewAndLevel } from './ViewAndLevel';
 
 const ERROR_MESSAGES = {
   REQUIRED_PARAMETER: (name: string) => `Parameter '${name}' is required.`,
@@ -23,6 +25,8 @@ exports.handler = async function () {
   if( PROCEDURES_SCHEMA == undefined ) {
     throw logAndRethrow(ERROR_MESSAGES.REQUIRED_PARAMETER('PROCEDURES_SCHEMA'));
   }
+
+  const staleMvFilter = new StaleMaterializedViewFilter( process.env );
 
   let materializedViewHelper: MaterializedViewHelper;
   let groupedMaterializedViews: ViewAndLevel[][];
@@ -63,10 +67,17 @@ exports.handler = async function () {
 
   // - List materialized views that need refresh ...
   try {
+    console.log("Start stale materialized views listing");
     const materializedViewList = await materializedViewHelper.listStaleMaterializedViews();
+    console.log(" - stale view listing returned "+ materializedViewList.length + " views.");
+
+    console.log("\nStart stale materialized view filtering");
+    const filteredMaterializedViewList = await staleMvFilter.filterAll( materializedViewList );
     
+    console.log("\nDecide to refresh "+ filteredMaterializedViewList.length + " views.");
+
     // ... grouped by depth level.
-    groupedMaterializedViews = groupMaterializedViews( materializedViewList );
+    groupedMaterializedViews = groupMaterializedViews( filteredMaterializedViewList );
   } catch (error) {
     if( await redshiftClusterChecker.isAvailable() ) {
       throw logAndRethrow(ERROR_MESSAGES.REDSHIFT_LIST_VIEWS_ERROR(), error );
@@ -78,8 +89,9 @@ exports.handler = async function () {
   }
   
   // - Refresh views in parallel, starting from dependencies.
+  console.log("The stale views to be refreshed are at " + groupedMaterializedViews.length + " different levels.")
   for( const materializedViewsGroup of groupedMaterializedViews ) {
-    console.log( materializedViewsGroup );
+    console.log("\nStart same level views refresh ", materializedViewsGroup );
     
     try {
       const refreshing = materializedViewsGroup.map( 
@@ -95,23 +107,31 @@ exports.handler = async function () {
         console.warn("Exiting because Redshift Cluster is down");
         return "Aborted";
       }
-    } 
+    }
+    console.log("End same level views refresh");
   }
 
   // - Update last refresh info table, useful for quicksight user.
-  try {
-    await materializedViewHelper.updateLastMvRefreshInfo();
-  } catch (error) {
-    if( await redshiftClusterChecker.isAvailable() ) {
-      throw logAndRethrow(ERROR_MESSAGES.REDSHIFT_UPDATE_LAST_REFRESH_INFO_ERROR(), error );
+  if( groupedMaterializedViews.length > 0 ) {
+    try {
+      console.log("\nStart updating table with materialized view refresh timestamp");
+      await materializedViewHelper.updateLastMvRefreshInfo();
+      console.log("End updating table with materialized view refresh timestamp");
+    } catch (error) {
+      if( await redshiftClusterChecker.isAvailable() ) {
+        throw logAndRethrow(ERROR_MESSAGES.REDSHIFT_UPDATE_LAST_REFRESH_INFO_ERROR(), error );
+      }
+      else {
+        console.warn("Exiting because Redshift Cluster is down");
+        return "Aborted";
+      }
     }
-    else {
-      console.warn("Exiting because Redshift Cluster is down");
-      return "Aborted";
-    }
+    return "Refresh Completed"
   }
-
-  return "Refresh Completed"
+  else {
+    console.log("\nNo Refresh done. Skip update of materialized view refresh timestamp!!")
+    return "Refresh Completed, no refresh done!"
+  }
 };
 
 
