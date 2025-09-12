@@ -29,7 +29,7 @@ export class StaleMaterializedViewFilter {
         filter = { minimumRefreshDelaySeconds: intValue }
       }
       else {
-        const msg = "Error parsing " + name + " environment variable: " + envValue + " is not parsable to integer";
+        const msg = "Error parsing " + name + " environment variable: " + envValue + " is not parsable as integer";
         console.error( msg );
         throw new Error(msg );
       }
