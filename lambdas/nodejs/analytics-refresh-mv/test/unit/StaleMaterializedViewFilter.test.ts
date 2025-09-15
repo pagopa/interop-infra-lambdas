@@ -35,8 +35,8 @@ describe('StaleMaterializedViewFilter', () => {
       vi.useRealTimers();
     });
 
-    it('should apply the INCREMENTAL_MV_MIN_INTERVAL correctly', async () => {
-      const mockEnv = { INCREMENTAL_MV_MIN_INTERVAL: '300' }; // 5 minutes
+    it('should apply the INCREMENTAL_MV_MIN_INTERVAL_SECONDS correctly', async () => {
+      const mockEnv = { INCREMENTAL_MV_MIN_INTERVAL_SECONDS: '300' }; // 5 minutes
       const filter = new StaleMaterializedViewFilter(mockEnv);
       
       const staleMv: ViewAndLevel = {
@@ -55,8 +55,8 @@ describe('StaleMaterializedViewFilter', () => {
       expect(result[0].mvName).toBe('stale');
     });
 
-    it('should apply the NOT_INCREMENTAL_MV_MIN_INTERVAL correctly', async () => {
-      const mockEnv = { NOT_INCREMENTAL_MV_MIN_INTERVAL: '3600' }; // 1 hour
+    it('should apply the NOT_INCREMENTAL_MV_MIN_INTERVAL_SECONDS correctly', async () => {
+      const mockEnv = { NOT_INCREMENTAL_MV_MIN_INTERVAL_SECONDS: '3600' }; // 1 hour
       const filter = new StaleMaterializedViewFilter(mockEnv);
       
       const staleMv: ViewAndLevel = {
@@ -90,10 +90,10 @@ describe('StaleMaterializedViewFilter', () => {
     });
 
     it('should throw an error if an environment variable is not a valid number', () => {
-      const mockEnv = { INCREMENTAL_MV_MIN_INTERVAL: 'not-a-number' };
+      const mockEnv = { INCREMENTAL_MV_MIN_INTERVAL_SECONDS: 'not-a-number' };
       
       expect(() => new StaleMaterializedViewFilter(mockEnv))
-        .toThrow('Error parsing INCREMENTAL_MV_MIN_INTERVAL environment variable');
+        .toThrow('Error parsing INCREMENTAL_MV_MIN_INTERVAL_SECONDS environment variable');
     });
   });
 
@@ -116,8 +116,8 @@ describe('StaleMaterializedViewFilter', () => {
     });
 
     const mockEnv: NodeJS.ProcessEnv = {
-        INCREMENTAL_MV_MIN_INTERVAL: '600',      // 10 minutes
-        NOT_INCREMENTAL_MV_MIN_INTERVAL: '7200'  // 2 hours
+        INCREMENTAL_MV_MIN_INTERVAL_SECONDS: '600',      // 10 minutes
+        NOT_INCREMENTAL_MV_MIN_INTERVAL_SECONDS: '7200'  // 2 hours
     };
 
     const staleIncrementalMv: ViewAndLevel = {

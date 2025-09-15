@@ -28,10 +28,10 @@ All the parameters are read from environment variables:
 - `VIEWS_SCHEMAS_NAMES` a json array of strings where each element is a database 
   schema to inspect for stale materialized views.
 - `PROCEDURES_SCHEMA` the name of the redshift schema where the procedure are declared.
-- `INCREMENTAL_MV_MIN_INTERVAL`, this optional parameter contain the minimum number of seconds 
+- `INCREMENTAL_MV_MIN_INTERVAL_SECONDS`, this optional parameter contain the minimum number of seconds 
    between two refresh of the same materialized view. This parameter apply to materialized views 
    that are refreshed incrementally. If not given default value is 0.
-- `NOT_INCREMENTAL_MV_MIN_INTERVAL`, this optional parameter contain the minimum number of seconds 
+- `NOT_INCREMENTAL_MV_MIN_INTERVAL_SECONDS`, this optional parameter contain the minimum number of seconds 
    between two refresh of the same materialized view. This parameter apply to materialized views 
    that are refreshed with full recalculation and materialized views with refresh issues. If not 
    given default value is 0. Technically this parameter is used for every materialized view with 

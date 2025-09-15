@@ -12,10 +12,10 @@ export class StaleMaterializedViewFilter {
   constructor( env: NodeJS.ProcessEnv ) {
     console.log("Configuring filters:")
     
-    this.#incrementalRefreshFilter = this.#configureFilter( env, "INCREMENTAL_MV_MIN_INTERVAL" );
+    this.#incrementalRefreshFilter = this.#configureFilter( env, "INCREMENTAL_MV_MIN_INTERVAL_SECONDS" );
     console.log(" - Incremental views min delay:", this.#incrementalRefreshFilter)
 
-    this.#notIncrementalRefreshFilter = this.#configureFilter( env, "NOT_INCREMENTAL_MV_MIN_INTERVAL" );
+    this.#notIncrementalRefreshFilter = this.#configureFilter( env, "NOT_INCREMENTAL_MV_MIN_INTERVAL_SECONDS" );
     console.log(" - Not incremental views min delay:", this.#notIncrementalRefreshFilter)
   }
 
