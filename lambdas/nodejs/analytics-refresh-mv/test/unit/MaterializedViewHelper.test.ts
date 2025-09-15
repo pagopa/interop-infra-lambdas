@@ -1,9 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { MaterializedViewHelper, ViewAndLevel } from '../../src//MaterializedViewHelper';
+import { MaterializedViewHelper } from '../../src//MaterializedViewHelper';
 import { RedshiftDataWrapper } from '../../src/RedshiftDataWrapper';
 import { GetStatementResultCommandOutput } from '@aws-sdk/client-redshift-data';
+import { ViewAndLevel } from '../../src/ViewAndLevel';
 
 // --- Mock Setup ---
+// We spy on console.error to ensure it's called without polluting test logs.
+vi.spyOn(console, 'error').mockImplementation(() => {});
+vi.spyOn(console, 'log').mockImplementation(() => {});
+
 // Create mock functions for the methods we'll use from RedshiftDataWrapper
 const mockExecuteSqlStatementsWithData = vi.fn();
 const mockExecuteSqlStatement = vi.fn();
@@ -64,8 +69,26 @@ describe('MaterializedViewHelper', () => {
         null, // Result of the CALL statement
         {     // Result of the SELECT statement
           Records: [
-            [{ stringValue: 'schema1' }, { stringValue: 'mv_a' }, { longValue: 1 }],
-            [{ stringValue: 'schema2' }, { stringValue: 'mv_b' }, { longValue: 2 }],
+            [
+              { stringValue: 'schema1' }, 
+              { stringValue: 'mv_a' }, 
+              { longValue: 1 }, 
+              { booleanValue: true },
+              { stringValue: "Start time" },
+              { stringValue: "End time" },
+              { longValue: 1000 },
+              { longValue: 2000 },
+            ],
+            [
+              { stringValue: 'schema2' }, 
+              { stringValue: 'mv_b' }, 
+              { longValue: 2 }, 
+              { isNull: true },
+              { isNull: true },
+              { isNull: true },
+              { isNull: true },
+              { isNull: true },
+            ],
           ],
           $metadata: {}
         },
@@ -85,8 +108,26 @@ describe('MaterializedViewHelper', () => {
 
       // 2. Check that the output is parsed correctly
       const expected: ViewAndLevel[] = [
-        { mvSchemaName: 'schema1', mvName: 'mv_a', mvLevel: 1 },
-        { mvSchemaName: 'schema2', mvName: 'mv_b', mvLevel: 2 },
+        { 
+          mvSchemaName: 'schema1', 
+          mvName: 'mv_a', 
+          mvLevel: 1, 
+          incrementalRefreshNotSupported: true,
+          lastRefreshStartTime: "Start time",
+          lastRefreshStartTimeEpoch: 1000,
+          lastRefreshEndTime: "End time",
+          lastRefreshEndTimeEpoch: 2000,
+        },
+        { 
+          mvSchemaName: 'schema2', 
+          mvName: 'mv_b', 
+          mvLevel: 2,
+          incrementalRefreshNotSupported: false,
+          lastRefreshStartTime: undefined,
+          lastRefreshStartTimeEpoch: 0,
+          lastRefreshEndTime: undefined,
+          lastRefreshEndTimeEpoch: 0,
+        },
       ];
       expect(result).toEqual(expected);
     });

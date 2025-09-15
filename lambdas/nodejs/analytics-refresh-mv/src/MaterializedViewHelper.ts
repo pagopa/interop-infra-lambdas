@@ -1,12 +1,6 @@
 import { IRedshiftDataWrapper } from "./IRedshiftDataWrapper";
 import { assertAlphanumericNotEmptyAndTrim } from "./utils";
-
-export type ViewAndLevel = {
-    mvSchemaName: string;
-    mvName: string;
-    mvLevel: number;
-};
-
+import { ViewAndLevel } from "./ViewAndLevel";
 
 export class MaterializedViewHelper {
   
@@ -36,7 +30,12 @@ export class MaterializedViewHelper {
       {
         sql: `
           SELECT
-            mv_schema, mv_name, mv_level
+            mv_schema, mv_name, mv_level, 
+            incremental_refresh_not_supported, 
+            last_refresh_start_time, 
+            last_refresh_end_time,
+            last_refresh_start_time_epoch,
+            last_refresh_end_time_epoch
           FROM
             list_need_refresh_views_results
           ORDER BY
@@ -62,7 +61,21 @@ export class MaterializedViewHelper {
         if( !mvSchemaName || !mvName || mvLevel === undefined ) {
           throw new Error( JSON.stringify(rec) + " some field is missing or null ");
         }
-        const oneView = { mvSchemaName, mvName, mvLevel };
+        const incrementalRefreshNotSupported = rec[3].booleanValue || false;
+        const lastRefreshStartTime = rec[4].stringValue;
+        const lastRefreshEndTime = rec[5].stringValue;
+        const lastRefreshStartTimeEpoch = rec[6].longValue || 0;
+        const lastRefreshEndTimeEpoch = rec[7].longValue || 0;
+        const oneView = { 
+          mvSchemaName, 
+          mvName, 
+          mvLevel, 
+          incrementalRefreshNotSupported, 
+          lastRefreshStartTime, 
+          lastRefreshEndTime,
+          lastRefreshStartTimeEpoch,
+          lastRefreshEndTimeEpoch
+        };
         result.push( oneView );
       })
     }
@@ -77,9 +90,9 @@ export class MaterializedViewHelper {
     const sql = "CALL \"" + this.#proceduresSchema + "\".refresh_materialized_view( :schemaName, :mvName );" 
     const params = { schemaName, mvName }
     
-    console.log("Start " + sql + " Params: " + JSON.stringify( params ));
+    console.log(" - start " + sql + " Params: " + JSON.stringify( params ));
     await this.#redshiftWrapper.executeSqlStatement( sql, params );
-    console.log("End " + sql + " Params: " + JSON.stringify( params ));
+    console.log(" - end " + sql + " Params: " + JSON.stringify( params ));
     return mvName;
   }
 
@@ -90,9 +103,9 @@ export class MaterializedViewHelper {
                                    + "\".update_last_mv_refresh_info( :schemasList );";
     const params = { schemasList };
 
-    console.log("Start " + sql + " Params: " + JSON.stringify( params ));
+    console.log(" - start " + sql + " Params: " + JSON.stringify( params ));
     await this.#redshiftWrapper.executeSqlStatement( sql, params );
-    console.log("End " + sql + " Params: " + JSON.stringify( params ));
+    console.log(" - end " + sql + " Params: " + JSON.stringify( params ));
     return "table updated";
   }
 
