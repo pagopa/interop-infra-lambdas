@@ -1,21 +1,8 @@
+import { AwsQuickSightWrapper } from "./AwsQuickSightWrapper";
+import { AwsStsWrapper } from "./AwsStsWrapper";
 import { QuickSightAlertScheduler } from "./QuickSightAlertScheduler";
+import { checkOnOffAction } from "./utils";
 
-
-type OnOffAction = "ON" | "OFF";
-
-function checkOnOffAction( actionValue: string, actionName: string ): OnOffAction {
-  let result: OnOffAction;
-  if( "ON" === actionValue ) {
-    result = "ON";
-  }
-  else if( "OFF" === actionValue ) {
-    result = "OFF";
-  }
-  else {
-    throw new Error(`Action ${actionName} is an ON/OFF action, value '${actionValue}' is not allowed`)
-  }
-  return result;
-}
 
 type InputTypeEvent = { 
   "detail": { 
@@ -25,10 +12,15 @@ type InputTypeEvent = {
 
 
 exports.handler = async function ( event: InputTypeEvent ) {
+  if( ! event ) {
+    throw new Error("Event null or undefined is not allowed")
+  }
   
-  const scheduleAction = checkOnOffAction( event?.detail?.schedule_action, "details.schedule_action" )
+  const scheduleAction = checkOnOffAction( event.detail?.schedule_action, "details.schedule_action" )
 
-  const dataSetsScheduler = new QuickSightAlertScheduler();
+  const sts = new AwsStsWrapper();
+  const qs = new AwsQuickSightWrapper( sts );
+  const dataSetsScheduler = new QuickSightAlertScheduler( qs );
   
   switch( scheduleAction ) {
     case "ON": dataSetsScheduler.activateScheduling(); break;

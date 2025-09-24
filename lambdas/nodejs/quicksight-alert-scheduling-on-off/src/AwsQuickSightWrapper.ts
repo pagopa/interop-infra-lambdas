@@ -17,9 +17,9 @@ export class AwsQuickSightWrapper {
   #quicksight: QuickSightClient;
   #sts: AwsStsWrapper;
 
-  constructor() {
+  constructor( sts: AwsStsWrapper) {
     this.#quicksight = new QuickSightClient();
-    this.#sts = new AwsStsWrapper();;
+    this.#sts = sts;
   }
 
   async #listAllDataSets() {
@@ -52,16 +52,13 @@ export class AwsQuickSightWrapper {
     }
   }
 
-  async #isSpiceDataSet(  dataSet: DataSetSummary) {
-    return dataSet.ImportMode === "SPICE"    
-  }
-
   async listScheduleSupportingDataSets(): Promise<DataSetSummaryWithTags[]> {
     const allDatasets = await this.#listAllDataSets();
+    
     const spiceDatasets = allDatasets.filter(
-      (dataSet) => this.#isSpiceDataSet( dataSet)
+      (dataSet) => (dataSet.ImportMode === "SPICE")
     )
-
+    
     const tagsEnricherPromises = spiceDatasets.map( 
       (dataSet) => this.#enrichWithTags( dataSet )
     );
@@ -118,7 +115,7 @@ export class AwsQuickSightWrapper {
       console.log(` - Successfully applied schedule to '${datasetSummary.Arn}'. Schedule data:\n`, scheduleConfig );
     } 
     catch (error: unknown) {
-      const errorName = ( error as { name?: string})?.name;
+      const errorName = ( error as { name?: string}).name;
       if ( errorName === "ResourceExistsException") {
         console.warn(` - Schedule for '${datasetSummary.Arn}' already exists` );
       }
@@ -143,7 +140,7 @@ export class AwsQuickSightWrapper {
 
       console.log(` - Successfully removed schedule to '${datasetSummary.Arn}'.`);
     } catch (error: unknown) {
-      const errorName = ( error as { name?: string})?.name;
+      const errorName = ( error as { name?: string}).name;
       if ( errorName === "ResourceNotFoundException") {
         console.warn(` - Schedule for '${datasetSummary.Arn}' is not present, so delete is skipped`);
       }

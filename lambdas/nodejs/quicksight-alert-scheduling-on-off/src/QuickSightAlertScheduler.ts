@@ -6,14 +6,13 @@ export class QuickSightAlertScheduler {
 
   #qs: AwsQuickSightWrapper;
 
-  constructor() {
-    this.#qs = new AwsQuickSightWrapper();
+  constructor( qs: AwsQuickSightWrapper ) {
+    this.#qs = qs;
   }
 
   async #doForEachScheduleSupportingDataSet( 
     actionLambda: (ds: DataSetSummaryWithTags) => Promise<void>
   ) {
-    
     const dataSetsWithTags = await this.#qs.listScheduleSupportingDataSets();
 
     console.log( "DataSet that support alert check scheduling" );

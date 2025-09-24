@@ -4,10 +4,6 @@ export class AwsStsWrapper {
 
   #accountId: string | undefined
 
-  constructor() {
-    this.#accountId = undefined;
-  }
-
   async getAwsAccountId() {
     if( ! this.#accountId ) {
       this.#accountId = await this.#getAwsAccountIdFromServer();
