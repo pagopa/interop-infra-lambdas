@@ -6,12 +6,12 @@ export class AwsStsWrapper {
 
   async getAwsAccountId() {
     if( ! this.#accountId ) {
-      this.#accountId = await this.#getAwsAccountIdFromServer();
+      this.#accountId = await this.getAwsAccountIdFromServer();
     }
     return this.#accountId;
   }
 
-  async #getAwsAccountIdFromServer() {
+  async getAwsAccountIdFromServer() {
     try {
       console.log(" - Determining AWS Account ID from caller identity...");
       const stsClient = new STSClient({});
