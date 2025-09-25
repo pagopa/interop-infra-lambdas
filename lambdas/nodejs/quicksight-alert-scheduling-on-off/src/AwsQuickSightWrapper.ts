@@ -22,7 +22,7 @@ export class AwsQuickSightWrapper {
     this.#sts = sts;
   }
 
-  async #listAllDataSets() {
+  async listAllDataSets() {
     try {
       const allDataSets = [];
       
@@ -53,20 +53,20 @@ export class AwsQuickSightWrapper {
   }
 
   async listScheduleSupportingDataSets(): Promise<DataSetSummaryWithTags[]> {
-    const allDatasets = await this.#listAllDataSets();
+    const allDatasets = await this.listAllDataSets();
     
     const spiceDatasets = allDatasets.filter(
       (dataSet) => (dataSet.ImportMode === "SPICE")
     )
     
     const tagsEnricherPromises = spiceDatasets.map( 
-      (dataSet) => this.#enrichWithTags( dataSet )
+      (dataSet) => this.enrichWithTags( dataSet )
     );
 
     return Promise.all( tagsEnricherPromises );
   }
 
-  async #enrichWithTags( dataSetSummary: DataSetSummary): Promise<DataSetSummaryWithTags> {
+  async enrichWithTags( dataSetSummary: DataSetSummary): Promise<DataSetSummaryWithTags> {
     try { 
       const dataSetArn = dataSetSummary.Arn;
 
