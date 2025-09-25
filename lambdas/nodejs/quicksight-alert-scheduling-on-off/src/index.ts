@@ -24,7 +24,7 @@ exports.handler = async function ( event: InputTypeEvent ) {
   const dataSetsScheduler = new QuickSightAlertScheduler( qs );
   
   switch( scheduleAction ) {
-    case "ON": dataSetsScheduler.activateScheduling(); break;
-    case "OFF": dataSetsScheduler.deactivateScheduling(); break;
+    case "ON": await dataSetsScheduler.activateScheduling(); break;
+    case "OFF": await dataSetsScheduler.deactivateScheduling(); break;
   }
 }
