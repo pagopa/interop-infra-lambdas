@@ -1,0 +1,22 @@
+{
+  "Records": [
+    {
+      "EventSource": "aws:sns",
+      "EventVersion": "1.0",
+      "EventSubscriptionArn": "arn:aws:sns:eu-south-1:505630707203:interop-analytics-redshift-events-dev:94640253-970e-4b78-be43-90367a73e8db",
+      "Sns": {
+        "Type": "Notification",
+        "MessageId": "8c9bc7c2-cddb-5a93-84f6-a68de3da1126",
+        "TopicArn": "arn:aws:sns:eu-south-1:505630707203:interop-analytics-redshift-events-dev",
+        "Message": "{\"Event Source\":\"cluster\",\"Resource\":\"interop-analytics-dev\",\"Event Time\":\"2025-09-25 11:47:12.711\",\"Identifier Link\":\"https://console.aws.amazon.com/redshift/home?region=eu-south-1#cluster-details:cluster=interop-analytics-dev \",\"Severity\":\"INFO\",\"Category\":[\"Monitoring\"],\"About this Event\":\"http://docs.aws.amazon.com/redshift/latest/mgmt/working-with-event-notifications.html#REDSHIFT-EVENT-3618 \",\"Event Message\":\"Amazon Redshift cluster 'interop-analytics-dev' pause operation started at 2025-09-25 11:47 UTC.\"}",
+        "Timestamp": "2025-09-25T11:47:13.645Z",
+        "SignatureVersion": "1",
+        "Signature": "dSW4k9eCUntHNtpEmqJ5Ik07YPRiI9jYj0RBgFD6PwXUZEzNlrd5ivAQKJEmkYkBw5AmQY8zoUNs70x4BMNrFRefV3cyhjjfoF+e1QFv/HoDArAj9AHLkRDp0pHLsm0LXHwOydZYMtPDp8op+aaYfRA8x61plwqFL7xvrpARgzMtZioiKAj30Xmh548oJBWgjYrvEkwoCRHJPeaxtSKax+Oz/7CN/9sQSrn/2h1yNDPBIpt8ZdpgG8i7jBAy5dXZojXf9JTocq6C/zaZDWmkxJ8+gL/B0vIGLcIBMEn3M88hMEKuB3JQ7+8JXiuvH0MBK4cnyqRwhYKZpfRGHXNYrg==",
+        "SigningCertUrl": "https://sns.eu-south-1.amazonaws.com/SimpleNotificationService-9244c37223ef8634a3d690599390a166.pem",
+        "Subject": "[Amazon Redshift INFO] - Pause Succeeded",
+        "UnsubscribeUrl": "https://sns.eu-south-1.amazonaws.com/?Action=Unsubscribe&SubscriptionArn=arn:aws:sns:eu-south-1:505630707203:interop-analytics-redshift-events-dev:94640253-970e-4b78-be43-90367a73e8db",
+        "MessageAttributes": {}
+      }
+    }
+  ]
+}

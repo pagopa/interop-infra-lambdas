@@ -14,8 +14,8 @@
     "lint:fix": "eslint . --fix",
     "build": "tsc",
     "build-archive": "tsc && (cd dist && zip -r ../quicksight-alert-scheduling-on-off.zip *)",
-    "local-on": "tsc && node -r \"dotenv-flow/config\" -e \"require('./dist/index.js').handler({ 'detail': { 'schedule_action': 'ON' }})\" ",
-    "local-off": "tsc && node -r \"dotenv-flow/config\" -e \"require('./dist/index.js').handler({ 'detail': { 'schedule_action': 'OFF' }})\" "
+    "local-on": "tsc && node -r \"dotenv-flow/config\" -e \"require('./dist/index.js').handler(JSON.parse(fs.readFileSync('example_redshift_events/redshift_resume_event.json', 'utf-8')))\" ",
+    "local-off": "tsc && node -r \"dotenv-flow/config\" -e \"require('./dist/index.js').handler(JSON.parse(fs.readFileSync('example_redshift_events/redshift_pause_event.json', 'utf-8')))\" "
   },
   "keywords": [],
   "author": "",

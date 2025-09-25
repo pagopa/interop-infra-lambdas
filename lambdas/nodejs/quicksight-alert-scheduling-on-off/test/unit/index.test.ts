@@ -35,84 +35,51 @@ describe('Lambda Handler', () => {
     vi.clearAllMocks();
   });
 
-  it('should call activateScheduling when the action is "ON"', async () => {
+  it('should call activateScheduling when the event is "REDSHIFT-EVENT-3622"', async () => {
     // ARRANGE
-    const event = { detail: { schedule_action: 'ON' } };
+    const event = { Records: [{ Sns: { Message: "{ \"About this Event\": \"#REDSHIFT-EVENT-3622\" }" }}] };
 
     // ACT: Execute the handler
-    await handler(event);
+    const result = await handler(event);
 
     // ASSERT: Verify the correct functions were called
+    expect(result).toBe("ON");
     expect(mockActivateScheduling).toHaveBeenCalledTimes(1);
     expect(mockDeactivateScheduling).not.toHaveBeenCalled();
   });
 
-  it('should call deactivateScheduling when the action is "OFF"', async () => {
+  it('should call deactivateScheduling when the event is "REDSHIFT-EVENT-3618"', async () => {
     // ARRANGE
-    const event = { detail: { schedule_action: 'OFF' } };
+    const event = { Records: [{ Sns: { Message: "{ \"About this Event\": \"#REDSHIFT-EVENT-3618\" }" }}] };
 
     // ACT
-    await handler(event);
+    const result = await handler(event);
 
     // ASSERT
+    expect(result).toBe("OFF");
     expect(mockDeactivateScheduling).toHaveBeenCalledTimes(1);
     expect(mockActivateScheduling).not.toHaveBeenCalled();
   });
 
-  it('should throw an error if the action is invalid', async () => {
+  it('should call do nothing if event is not "REDSHIFT-EVENT-3618" or "REDSHIFT-EVENT-3622""', async () => {
+    // ARRANGE
+    const event = { Records: [{ Sns: { Message: "{ \"About this Event\": \"#REDSHIFT-EVENT-3600\" }" }}] };
+
+    // ACT
+    const result = await handler(event);
+
+    // ASSERT
+    expect(result).toBe("NONE");
+    expect(mockDeactivateScheduling).not.toHaveBeenCalledTimes(1);
+    expect(mockActivateScheduling).not.toHaveBeenCalled();
+  });
+
+  it('should throw an error if the lambda event do not contain redshift events', async () => {
     // ARRANGE
     const event = { detail: { schedule_action: 'INVALID' } };
 
     // ACT & ASSERT: Expect the handler's promise to be rejected with the error
-    await expect(handler(event)).rejects.toThrow("Action detail.schedule_action is an ON/OFF action, value 'INVALID' is not allowed");
-
-    // Ensure no scheduling methods were called in the error case
-    expect(mockActivateScheduling).not.toHaveBeenCalled();
-    expect(mockDeactivateScheduling).not.toHaveBeenCalled();
-  });
-
-  it('should throw an error if the action is null', async () => {
-    // ARRANGE
-    const event = { detail: { schedule_action: null } };
-
-    // ACT & ASSERT: Expect the handler's promise to be rejected with the error
-    await expect(handler(event)).rejects.toThrow("Action detail.schedule_action is an ON/OFF action, value 'null' is not allowed");
-
-    // Ensure no scheduling methods were called in the error case
-    expect(mockActivateScheduling).not.toHaveBeenCalled();
-    expect(mockDeactivateScheduling).not.toHaveBeenCalled();
-  });
-
-  it('should throw an error if the action is a number', async () => {
-    // ARRANGE
-    const event = { detail: { schedule_action: 2 } };
-
-    // ACT & ASSERT: Expect the handler's promise to be rejected with the error
-    await expect(handler(event)).rejects.toThrow("Action detail.schedule_action is an ON/OFF action, value '2' is not allowed");
-
-    // Ensure no scheduling methods were called in the error case
-    expect(mockActivateScheduling).not.toHaveBeenCalled();
-    expect(mockDeactivateScheduling).not.toHaveBeenCalled();
-  });
-
-  it('should throw an error if the action is not given', async () => {
-    // ARRANGE
-    const event = { detail: { } };
-
-    // ACT & ASSERT: Expect the handler's promise to be rejected with the error
-    await expect(handler(event)).rejects.toThrow("Action detail.schedule_action is an ON/OFF action, value 'undefined' is not allowed");
-
-    // Ensure no scheduling methods were called in the error case
-    expect(mockActivateScheduling).not.toHaveBeenCalled();
-    expect(mockDeactivateScheduling).not.toHaveBeenCalled();
-  });
-
-  it('should throw an error if the event is empty', async () => {
-    // ARRANGE
-    const event = { };
-
-    // ACT & ASSERT: Expect the handler's promise to be rejected with the error
-    await expect(handler(event)).rejects.toThrow("Action detail.schedule_action is an ON/OFF action, value 'undefined' is not allowed");
+    await expect(handler(event)).rejects.toThrow("Lambda event do not contain redshift events");
 
     // Ensure no scheduling methods were called in the error case
     expect(mockActivateScheduling).not.toHaveBeenCalled();

@@ -1,0 +1,22 @@
+{
+  "Records": [
+    {
+      "EventSource": "aws:sns",
+      "EventVersion": "1.0",
+      "EventSubscriptionArn": "arn:aws:sns:eu-south-1:505630707203:interop-analytics-redshift-events-dev:94640253-970e-4b78-be43-90367a73e8db",
+      "Sns": {
+        "Type": "Notification",
+        "MessageId": "8839c41e-522e-5aa4-9225-a551622cce15",
+        "TopicArn": "arn:aws:sns:eu-south-1:505630707203:interop-analytics-redshift-events-dev",
+        "Message": "{\"Event Source\":\"cluster\",\"Resource\":\"interop-analytics-dev\",\"Event Time\":\"2025-09-25 11:41:38.276\",\"Identifier Link\":\"https://console.aws.amazon.com/redshift/home?region=eu-south-1#cluster-details:cluster=interop-analytics-dev \",\"Severity\":\"INFO\",\"Category\":[\"Monitoring\"],\"About this Event\":\"http://docs.aws.amazon.com/redshift/latest/mgmt/working-with-event-notifications.html#REDSHIFT-EVENT-3622 \",\"Event Message\":\"Amazon Redshift cluster 'interop-analytics-dev' was successfully resumed at 2025-09-25 11:41 UTC.\"}",
+        "Timestamp": "2025-09-25T11:55:46.801Z",
+        "SignatureVersion": "1",
+        "Signature": "AHdrqgE2Ru48K+AZzG70kdPlKJ1RhFo4FZXfKmi1nyquDh3jzBO570IxGgp0BMSrWAR+6dFOVnJidJ0sBrEJFVPKjQmeoOMzRjeznzb+MTi3wqPbIF3qGj7nIrfaTaPph7JMHBR6VnpeOB4RzZNRItPbu+Xt7aXNBGUldt0ABtEgUdOQ+IZyW5UY+rCFinYxs+aRXO0ZfExGCaSXQ3Wwikbm9xg2OUB3vaMJI6OFW16Hq+VcrPFs0ERUCIug0LuqwRYD78z6RW6sjgC1ExecZFWnDfqNLidLHQ1GcpIo9laLQkRN9TPIsMnXxuoZWXg2iqYHj5VElfKvYTEClZCe2Q==",
+        "SigningCertUrl": "https://sns.eu-south-1.amazonaws.com/SimpleNotificationService-9244c37223ef8634a3d690599390a166.pem",
+        "Subject": "[Amazon Redshift INFO] - Resume Succeeded",
+        "UnsubscribeUrl": "https://sns.eu-south-1.amazonaws.com/?Action=Unsubscribe&SubscriptionArn=arn:aws:sns:eu-south-1:505630707203:interop-analytics-redshift-events-dev:94640253-970e-4b78-be43-90367a73e8db",
+        "MessageAttributes": {}
+      }
+    }
+  ]
+}
