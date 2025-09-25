@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// We spy on console.error to ensure it's called without polluting test logs.
+vi.spyOn(console, 'error').mockImplementation(() => {});
+vi.spyOn(console, 'log').mockImplementation(() => {});
+
 // --- 1. Mock all dependencies ---
 // We mock every imported module to control its behavior and isolate the handler.
 
