@@ -10,7 +10,7 @@ export class QuickSightAlertScheduler {
     this.#qs = qs;
   }
 
-  async doForEachScheduleSupportingDataSet( 
+  async #doForEachScheduleSupportingDataSet( 
     actionLambda: (ds: DataSetSummaryWithTags) => Promise<void>
   ) {
     const dataSetsWithTags = await this.#qs.listScheduleSupportingDataSets();
@@ -30,7 +30,7 @@ export class QuickSightAlertScheduler {
   }
 
   async activateScheduling( ) {
-    await this.doForEachScheduleSupportingDataSet(
+    await this.#doForEachScheduleSupportingDataSet(
       async (dataSetWithTags) => {
         const refreshType = this.#qs.getTagValue( dataSetWithTags, REFRESH_TYPE_TAG_NAME )
         if( refreshType ) { 
@@ -44,7 +44,7 @@ export class QuickSightAlertScheduler {
   }
 
   async deactivateScheduling( ) {
-    await this.doForEachScheduleSupportingDataSet(
+    await this.#doForEachScheduleSupportingDataSet(
       async (dataSetWithTags) => {
         await this.#qs.deleteRefreshSchedule( dataSetWithTags )
       }
