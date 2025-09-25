@@ -12,7 +12,7 @@ type InputTypeEvent = {
 
 
 exports.handler = async function ( event: InputTypeEvent ) {
-  console.log( "Received Event: ", event )
+  console.log( "Received Event: \n" + JSON.stringify( event, null, 2))
   if( ! event ) {
     throw new Error("Event null or undefined is not allowed")
   }
