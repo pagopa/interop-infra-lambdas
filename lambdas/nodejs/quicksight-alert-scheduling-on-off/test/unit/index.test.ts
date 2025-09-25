@@ -60,7 +60,7 @@ describe('Lambda Handler', () => {
     const event = { detail: { schedule_action: 'INVALID' } };
 
     // ACT & ASSERT: Expect the handler's promise to be rejected with the error
-    await expect(handler(event)).rejects.toThrow("Action details.schedule_action is an ON/OFF action, value 'INVALID' is not allowed");
+    await expect(handler(event)).rejects.toThrow("Action detail.schedule_action is an ON/OFF action, value 'INVALID' is not allowed");
 
     // Ensure no scheduling methods were called in the error case
     expect(mockActivateScheduling).not.toHaveBeenCalled();
@@ -72,7 +72,7 @@ describe('Lambda Handler', () => {
     const event = { detail: { schedule_action: null } };
 
     // ACT & ASSERT: Expect the handler's promise to be rejected with the error
-    await expect(handler(event)).rejects.toThrow("Action details.schedule_action is an ON/OFF action, value 'null' is not allowed");
+    await expect(handler(event)).rejects.toThrow("Action detail.schedule_action is an ON/OFF action, value 'null' is not allowed");
 
     // Ensure no scheduling methods were called in the error case
     expect(mockActivateScheduling).not.toHaveBeenCalled();
@@ -84,7 +84,7 @@ describe('Lambda Handler', () => {
     const event = { detail: { schedule_action: 2 } };
 
     // ACT & ASSERT: Expect the handler's promise to be rejected with the error
-    await expect(handler(event)).rejects.toThrow("Action details.schedule_action is an ON/OFF action, value '2' is not allowed");
+    await expect(handler(event)).rejects.toThrow("Action detail.schedule_action is an ON/OFF action, value '2' is not allowed");
 
     // Ensure no scheduling methods were called in the error case
     expect(mockActivateScheduling).not.toHaveBeenCalled();
@@ -96,7 +96,7 @@ describe('Lambda Handler', () => {
     const event = { detail: { } };
 
     // ACT & ASSERT: Expect the handler's promise to be rejected with the error
-    await expect(handler(event)).rejects.toThrow("Action details.schedule_action is an ON/OFF action, value 'undefined' is not allowed");
+    await expect(handler(event)).rejects.toThrow("Action detail.schedule_action is an ON/OFF action, value 'undefined' is not allowed");
 
     // Ensure no scheduling methods were called in the error case
     expect(mockActivateScheduling).not.toHaveBeenCalled();
@@ -108,7 +108,7 @@ describe('Lambda Handler', () => {
     const event = { };
 
     // ACT & ASSERT: Expect the handler's promise to be rejected with the error
-    await expect(handler(event)).rejects.toThrow("Action details.schedule_action is an ON/OFF action, value 'undefined' is not allowed");
+    await expect(handler(event)).rejects.toThrow("Action detail.schedule_action is an ON/OFF action, value 'undefined' is not allowed");
 
     // Ensure no scheduling methods were called in the error case
     expect(mockActivateScheduling).not.toHaveBeenCalled();

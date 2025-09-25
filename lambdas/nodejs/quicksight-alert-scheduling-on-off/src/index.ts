@@ -12,11 +12,12 @@ type InputTypeEvent = {
 
 
 exports.handler = async function ( event: InputTypeEvent ) {
+  console.log( "Received Event: ", event )
   if( ! event ) {
     throw new Error("Event null or undefined is not allowed")
   }
   
-  const scheduleAction = checkOnOffAction( event.detail?.schedule_action, "details.schedule_action" )
+  const scheduleAction = checkOnOffAction( event.detail?.schedule_action, "detail.schedule_action" )
 
   const sts = new AwsStsWrapper();
   const qs = new AwsQuickSightWrapper( sts );

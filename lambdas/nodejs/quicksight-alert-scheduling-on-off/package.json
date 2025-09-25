@@ -13,7 +13,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "build": "tsc",
-    "build-archive": "tsc && (cd dist && zip -r ../analytics-refresh-mv-lambda.zip *)",
+    "build-archive": "tsc && (cd dist && zip -r ../quicksight-alert-scheduling-on-off.zip *)",
     "local-on": "tsc && node -r \"dotenv-flow/config\" -e \"require('./dist/index.js').handler({ 'detail': { 'schedule_action': 'ON' }})\" ",
     "local-off": "tsc && node -r \"dotenv-flow/config\" -e \"require('./dist/index.js').handler({ 'detail': { 'schedule_action': 'OFF' }})\" "
   },
