@@ -1,0 +1,40 @@
+{
+  "name": "quicksight-alert-scheduling-on-off",
+  "version": "1.0.0",
+  "description": "Code for lambda that activate/deactivate SPICE DataSet refresh-scheduling, refresh also trigger dashboards alerts",
+  "main": "index.js",
+  "engines": {
+    "node": "24"
+  },
+  "scripts": {
+    "test": "npm run test:unit",
+    "test:unit": "vitest run --config vitest.unit.config.ts --coverage",
+    "mutation-testing": "npx stryker run",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "build": "tsc",
+    "build-archive": "tsc && (cd dist && zip -r ../quicksight-alert-scheduling-on-off.zip *)",
+    "local-on": "tsc && node -r \"dotenv-flow/config\" -e \"require('./dist/index.js').handler(JSON.parse(fs.readFileSync('example_redshift_events/redshift_resume_event.json', 'utf-8')))\" ",
+    "local-off": "tsc && node -r \"dotenv-flow/config\" -e \"require('./dist/index.js').handler(JSON.parse(fs.readFileSync('example_redshift_events/redshift_pause_event.json', 'utf-8')))\" "
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@eslint/js": "^9.32.0",
+    "@stryker-mutator/core": "^9.1.1",
+    "@stryker-mutator/typescript-checker": "^9.1.1",
+    "@stryker-mutator/vitest-runner": "^9.1.1",
+    "@types/node": "^20.14.9",
+    "@vitest/coverage-istanbul": "^3.2.4",
+    "dotenv-flow": "^4.1.0",
+    "eslint": "^9.32.0",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.38.0",
+    "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "@aws-sdk/client-quicksight": "^3.894.0",
+    "@aws-sdk/client-sts": "^3.894.0"
+  }
+}
