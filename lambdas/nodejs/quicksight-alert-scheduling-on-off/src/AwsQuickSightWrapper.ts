@@ -98,7 +98,7 @@ export class AwsQuickSightWrapper {
 
     const refreshType = refreshParams.refreshType;
     if( ![ "INCREMENTAL_REFRESH", "FULL_REFRESH"].includes( refreshType )) {
-      const msg = "refresh type not supported: " + refreshType + " on dataset " + datasetSummary.Arn;
+      const msg = "refresh type not supported: " + refreshType + " for dataset " + datasetSummary.Arn;
       console.error( msg );
       throw new Error( msg );
     }
