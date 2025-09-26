@@ -197,7 +197,8 @@ describe('AwsQuickSightWrapper', () => {
       const wrapper = new AwsQuickSightWrapper(mockStsWrapper);
 
       // ACT & ASSERT
-      await expect(wrapper.createRefreshSchedule(spiceDataSet, 'INVALID_TYPE')).rejects.toThrow(
+      const scheduleConfig = { refreshType: 'INVALID_TYPE', refreshInterval: 'MINUTE15' }
+      await expect(wrapper.createRefreshSchedule(spiceDataSet, scheduleConfig )).rejects.toThrow(
         'refresh type not supported: INVALID_TYPE'
       );
       // Ensure no AWS call was made for an invalid type.
@@ -210,7 +211,8 @@ describe('AwsQuickSightWrapper', () => {
       const wrapper = new AwsQuickSightWrapper(mockStsWrapper);
 
       // ACT 
-      await wrapper.createRefreshSchedule(spiceDataSet, 'FULL_REFRESH')
+      const scheduleConfig = { refreshType: 'FULL_REFRESH', refreshInterval: 'HOURLY' }
+      await wrapper.createRefreshSchedule(spiceDataSet, scheduleConfig)
       
       // ASSERT: The method should catch this specific error and resolve successfully.
       expect( mockQuicksightSend ).toHaveBeenCalledOnce()
@@ -228,14 +230,15 @@ describe('AwsQuickSightWrapper', () => {
       const wrapper = new AwsQuickSightWrapper(mockStsWrapper);
 
       // ACT 
-      await wrapper.createRefreshSchedule(spiceDataSet, 'INCREMENTAL_REFRESH')
+      const scheduleConfig = { refreshType: 'INCREMENTAL_REFRESH', refreshInterval: 'HOURLY' }
+      await wrapper.createRefreshSchedule(spiceDataSet, scheduleConfig )
       
       // ASSERT: The method should resolve successfully.
       expect( mockQuicksightSend ).toHaveBeenCalledOnce()
 
       const sentCommand = mockQuicksightSend.mock.calls[0][0] as CreateRefreshScheduleCommand;
       expect( sentCommand.input.Schedule?.RefreshType ).toBe('INCREMENTAL_REFRESH')
-      expect( sentCommand.input.Schedule?.ScheduleFrequency?.Interval ).toBe('MINUTE15')
+      expect( sentCommand.input.Schedule?.ScheduleFrequency?.Interval ).toBe('HOURLY')
     });
 
     it('should rethrow errors', async () => {
@@ -244,7 +247,8 @@ describe('AwsQuickSightWrapper', () => {
       const wrapper = new AwsQuickSightWrapper(mockStsWrapper);
 
       // ACT & ASSERT
-      await expect( async () => await wrapper.createRefreshSchedule(spiceDataSet, 'INCREMENTAL_REFRESH')).rejects.toThrow("Send fail");
+      const scheduleConfig = { refreshType: 'INCREMENTAL_REFRESH', refreshInterval: 'HOURLY' }
+      await expect( async () => await wrapper.createRefreshSchedule(spiceDataSet, scheduleConfig)).rejects.toThrow("Send fail");
     });
   });
 

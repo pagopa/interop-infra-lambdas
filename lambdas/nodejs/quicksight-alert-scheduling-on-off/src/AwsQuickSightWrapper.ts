@@ -6,11 +6,16 @@ import {
     ListTagsForResourceCommand, 
     IngestionType, 
     DeleteRefreshScheduleCommand, 
-    CreateRefreshScheduleRequest
+    CreateRefreshScheduleRequest,
+    RefreshInterval
 } from "@aws-sdk/client-quicksight";
 import { AwsStsWrapper } from "./AwsStsWrapper";
 
 export type DataSetSummaryWithTags = DataSetSummary & { tags:{ [key: string]: string | undefined }}
+export type RefreshParameters = {
+  refreshType: string
+  refreshInterval: string
+}
 
 export class AwsQuickSightWrapper {
   
@@ -88,9 +93,10 @@ export class AwsQuickSightWrapper {
     return dataSetWithTag.tags[ tagName ];
   }
 
-  async createRefreshSchedule( datasetSummary: DataSetSummary, refreshType: string ) {
+  async createRefreshSchedule( datasetSummary: DataSetSummary, refreshParams: RefreshParameters ) {
     const dataSetId = datasetSummary.DataSetId;
 
+    const refreshType = refreshParams.refreshType;
     if( ![ "INCREMENTAL_REFRESH", "FULL_REFRESH"].includes( refreshType )) {
       const msg = "refresh type not supported: " + refreshType + " on dataset " + datasetSummary.Arn;
       console.error( msg );
@@ -104,7 +110,7 @@ export class AwsQuickSightWrapper {
         Schedule: {
           ScheduleId: dataSetId + "-schedule",
           ScheduleFrequency: {
-            Interval: (refreshType as IngestionType) == "INCREMENTAL_REFRESH" ? "MINUTE15" : "HOURLY"
+            Interval: refreshParams.refreshInterval as RefreshInterval
           },
           RefreshType: (refreshType as IngestionType)
         }

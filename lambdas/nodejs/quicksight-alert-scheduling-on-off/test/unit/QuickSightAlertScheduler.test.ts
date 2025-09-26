@@ -43,7 +43,7 @@ describe('QuickSightAlertScheduler', () => {
   // --- TESTS FOR activateScheduling ---
   describe('activateScheduling', () => {
 
-    it('should create schedules ONLY for datasets that have the "RefreshType" tag', async () => {
+    it('should create schedules ONLY for datasets that have the "RefreshType" tag, defining default interval, full', async () => {
       // ARRANGE
       // 1. Simulate the wrapper finding two datasets (one with the tag, one without).
       vi.mocked(mockQuickSightWrapper.listScheduleSupportingDataSets).mockResolvedValue([
@@ -72,7 +72,83 @@ describe('QuickSightAlertScheduler', () => {
       expect(mockQuickSightWrapper.createRefreshSchedule).toHaveBeenCalledOnce();
       
       // Check that it was called with the correct dataset and the value from its tag.
-      expect(mockQuickSightWrapper.createRefreshSchedule).toHaveBeenCalledWith(dataSetWithTag, 'FULL_REFRESH');
+      const scheduleConfig = { refreshInterval: "HOURLY", refreshType: "FULL_REFRESH" };
+      expect(mockQuickSightWrapper.createRefreshSchedule).toHaveBeenCalledWith(dataSetWithTag, scheduleConfig );
+      
+      // Ensure the delete method was never touched.
+      expect(mockQuickSightWrapper.deleteRefreshSchedule).not.toHaveBeenCalled();
+    });
+
+    it('should create schedules ONLY for datasets that have the "RefreshType" tag, defining default interval, incremental', async () => {
+      // ARRANGE
+      // 1. Simulate the wrapper finding two datasets (one with the tag, one without).
+      vi.mocked(mockQuickSightWrapper.listScheduleSupportingDataSets).mockResolvedValue([
+        dataSetWithTag,
+        dataSetWithoutTag,
+      ]);
+      
+      // 2. Simulate the getTagValue behavior to drive the filtering logic.
+      vi.mocked(mockQuickSightWrapper.getTagValue).mockImplementation((dataset, tagName) => {
+        // Return the tag value if it's the one we're looking for.
+        if (dataset.DataSetId === dataSetWithTag.DataSetId && tagName === 'RefreshType') {
+          return 'INCREMENTAL_REFRESH';
+        }
+        // Return undefined for the dataset without the tag.
+        return undefined;
+      });
+
+      // Create the class instance, injecting our mock dependency.
+      const scheduler = new QuickSightAlertScheduler(mockQuickSightWrapper);
+      
+      // ACT
+      await scheduler.activateScheduling();
+      
+      // ASSERT
+      // Check that the schedule creation was attempted ONLY ONCE.
+      expect(mockQuickSightWrapper.createRefreshSchedule).toHaveBeenCalledOnce();
+      
+      // Check that it was called with the correct dataset and the value from its tag.
+      const scheduleConfig = { refreshInterval: "MINUTE15", refreshType: "INCREMENTAL_REFRESH" };
+      expect(mockQuickSightWrapper.createRefreshSchedule).toHaveBeenCalledWith(dataSetWithTag, scheduleConfig );
+      
+      // Ensure the delete method was never touched.
+      expect(mockQuickSightWrapper.deleteRefreshSchedule).not.toHaveBeenCalled();
+    });
+
+    it('should create schedules ONLY for datasets that have the "RefreshType" tag, do not override interval tag', async () => {
+      // ARRANGE
+      // 1. Simulate the wrapper finding two datasets (one with the tag, one without).
+      vi.mocked(mockQuickSightWrapper.listScheduleSupportingDataSets).mockResolvedValue([
+        dataSetWithTag,
+        dataSetWithoutTag,
+      ]);
+      
+      // 2. Simulate the getTagValue behavior to drive the filtering logic.
+      vi.mocked(mockQuickSightWrapper.getTagValue).mockImplementation((dataset, tagName) => {
+        // Return the tag value if it's the one we're looking for.
+        if (dataset.DataSetId === dataSetWithTag.DataSetId && tagName === 'RefreshType') {
+          return 'INCREMENTAL_REFRESH';
+        }
+        else if (dataset.DataSetId === dataSetWithTag.DataSetId && tagName === 'RefreshInterval') {
+          return 'DAILY';
+        }
+        // Return undefined for the dataset without the tag.
+        return undefined;
+      });
+
+      // Create the class instance, injecting our mock dependency.
+      const scheduler = new QuickSightAlertScheduler(mockQuickSightWrapper);
+      
+      // ACT
+      await scheduler.activateScheduling();
+      
+      // ASSERT
+      // Check that the schedule creation was attempted ONLY ONCE.
+      expect(mockQuickSightWrapper.createRefreshSchedule).toHaveBeenCalledOnce();
+      
+      // Check that it was called with the correct dataset and the value from its tag.
+      const scheduleConfig = { refreshInterval: "DAILY", refreshType: "INCREMENTAL_REFRESH" };
+      expect(mockQuickSightWrapper.createRefreshSchedule).toHaveBeenCalledWith(dataSetWithTag, scheduleConfig );
       
       // Ensure the delete method was never touched.
       expect(mockQuickSightWrapper.deleteRefreshSchedule).not.toHaveBeenCalled();

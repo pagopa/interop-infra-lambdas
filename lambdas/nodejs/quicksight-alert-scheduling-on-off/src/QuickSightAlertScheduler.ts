@@ -1,6 +1,7 @@
 import { AwsQuickSightWrapper, DataSetSummaryWithTags } from "./AwsQuickSightWrapper";
 
 const REFRESH_TYPE_TAG_NAME = "RefreshType"
+const REFRESH_INTERVAL_TAG_NAME = "RefreshInterval"
 
 export class QuickSightAlertScheduler {
 
@@ -29,16 +30,27 @@ export class QuickSightAlertScheduler {
     return await Promise.all( actionsPromises )
   }
 
+  #defineScheduling( dataSetWithTags: DataSetSummaryWithTags ) {
+    const refreshType = this.#qs.getTagValue( dataSetWithTags, REFRESH_TYPE_TAG_NAME );
+    if( ! refreshType ) {
+      const msg = "Can't schedule DataSet " + dataSetWithTags.Arn + " do not has tag RefreshType";
+      console.error( msg );
+      throw new Error( msg );
+    }
+    
+    let refreshInterval = this.#qs.getTagValue( dataSetWithTags, REFRESH_INTERVAL_TAG_NAME );
+    if( !refreshInterval ) {
+      refreshInterval = (refreshType == "INCREMENTAL_REFRESH" ? "MINUTE15" : "HOURLY");
+    }
+    
+    return { refreshType, refreshInterval }
+  }
+
   async activateScheduling( ) {
     await this.#doForEachScheduleSupportingDataSet(
       async (dataSetWithTags) => {
-        const refreshType = this.#qs.getTagValue( dataSetWithTags, REFRESH_TYPE_TAG_NAME )
-        if( refreshType ) { 
-          await this.#qs.createRefreshSchedule( dataSetWithTags, refreshType )
-        }
-        else {
-          throw new Error(`Can't schedule DataSet ${dataSetWithTags.Arn} do not has tag ${REFRESH_TYPE_TAG_NAME}`)
-        }
+        const refreshParams = this.#defineScheduling( dataSetWithTags );
+        await this.#qs.createRefreshSchedule( dataSetWithTags, refreshParams )
       }
     )
   }
