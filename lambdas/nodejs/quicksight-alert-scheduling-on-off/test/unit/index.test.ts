@@ -61,7 +61,7 @@ describe('Lambda Handler', () => {
     expect(mockActivateScheduling).not.toHaveBeenCalled();
   });
 
-  it('should call do nothing if event is not "REDSHIFT-EVENT-3618" or "REDSHIFT-EVENT-3622""', async () => {
+  it('should call do nothing if event is not "REDSHIFT-EVENT-3618" or "REDSHIFT-EVENT-3622"', async () => {
     // ARRANGE
     const event = { Records: [{ Sns: { Message: "{ \"About this Event\": \"#REDSHIFT-EVENT-3600\" }" }}] };
 

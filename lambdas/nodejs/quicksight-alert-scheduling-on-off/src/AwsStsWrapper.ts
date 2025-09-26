@@ -20,7 +20,7 @@ export class AwsStsWrapper {
       const response = await stsClient.send(command);
       const accountId = response.Account
       if (!accountId) {
-        throw new Error("Account ID not found in STS response. \n" + response);
+        throw new Error("Account ID not found in STS response. \n" + JSON.stringify(response));
       }
       console.log(`   ... AWS Account ID: ${accountId}`);
       return accountId;

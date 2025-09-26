@@ -53,7 +53,7 @@ describe('RedshiftSnsEventDecoder', () => {
       });
     });
 
-    it('should tolerate not "code" empty fields', () => {
+    it('should tolerate empty fields other than "code"', () => {
       const lambdaEvent = createMockLambdaEvent([
         createMockSnsRecord(
           {
