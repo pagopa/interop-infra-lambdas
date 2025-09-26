@@ -35,11 +35,11 @@ Main points:
       [...]
     }
    ```
- - `RefreshInterval`: optional parameter, support the values `MINUTE15`, `MINUTE30`, 'HOURLY', `DAILY`
+ - `RefreshInterval`: optional parameter, support the values `MINUTE15`, `MINUTE30`, `HOURLY`, `DAILY`
    (described in AWS documentation](https://docs.aws.amazon.com/cli/latest/reference/quicksight/create-refresh-schedule.html).
-   - `MINUTE15` is the default when `RefreshType` is 'INCREMENTAL_REFRESH' and `HOURLY` is the 
-     default when `RefreshType` is 'FULL_REFRESH'.
-   - Values `MINUTE15`, `MINUTE30` are not supported if `RefreshType` is 'FULL_REFRESH'.
+   - `MINUTE15` is the default when `RefreshType` is `INCREMENTAL_REFRESH` and `HOURLY` is the 
+     default when `RefreshType` is `FULL_REFRESH`.
+   - Values `MINUTE15`, `MINUTE30` are not supported if `RefreshType` is `FULL_REFRESH`.
 
 ## Input Events
 This lambda, for each received event, look for an array field _Records_ and analyze each 
