@@ -3,6 +3,7 @@ import { MaterializedViewHelper } from '../../src/MaterializedViewHelper';
 import { RedshiftDataWrapper } from '../../src/RedshiftDataWrapper';
 import { RedshiftClusterChecker } from '../../src/RedshiftClusterChecker';
 import { ViewAndLevel } from '../../src/ViewAndLevel';
+import { MaterializedViewRefresherLambda } from '../../src//MaterializedViewRefresherLambda';
 
 // N.B.: This file is separated from index.test.ts because the use of mockImplementation 
 //       on RedshiftDataWrapper and MaterializedViewHelper interfere with others tests.
@@ -17,10 +18,10 @@ vi.spyOn(console, 'log').mockImplementation(() => {});
 // Mock all dependencies before they are imported by the handler.
 
 // 1. Mock the grouping function
-const mockGroupMaterializedViews = vi.fn();
+/*const mockGroupMaterializedViews = vi.fn();
 vi.mock('../../src/groupMaterializedViews', () => ({
   groupMaterializedViews: mockGroupMaterializedViews,
-}));
+}));*/
 
 // 2. Mock the wrapper classes and their methods
 const mockIsAvailable = vi.fn();
@@ -55,17 +56,16 @@ describe('Lambda Handler', () => {
   // Store original process.env
   const originalEnv = process.env;
 
-  // Dynamically import the handler AFTER mocks are set up
-  let handler;
+  // Dynamically define the handler AFTER mocks are set up
+  let handler = async function() {
+    const handlerObj = new MaterializedViewRefresherLambda( process.env );
+    return await handlerObj.executeMaterializedViewRefresh();
+  };
 
   beforeEach(async () => {
     // Reset all mocks and environment variables before each test
     vi.clearAllMocks();
     process.env = { ...originalEnv };
-    
-    // Import the handler here to ensure it gets the mocked dependencies
-    const module = await import('../../src/index'); // Adjust path if needed
-    handler = module.handler;
   });
 
   afterEach(() => {
