@@ -13,7 +13,7 @@ class AbortError extends Error {
  * It enables differentiation between "aborting" errors (which should immediately halt
  * execution) and "suppressed" errors (which are logged and deferred until finalization).
  * 
- * An usage example is:
+ * A usage example is:
  
  ```typescript
   const abortConditionChecker = async (err) => {

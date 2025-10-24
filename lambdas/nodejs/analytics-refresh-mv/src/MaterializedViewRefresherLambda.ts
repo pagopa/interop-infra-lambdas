@@ -38,7 +38,7 @@ export class MaterializedViewRefresherLambda {
 
     this.#staleMvFilter = new StaleMaterializedViewFilter( env );
     
-    const redshiftClusterIdentifier = process.env.REDSHIFT_CLUSTER_IDENTIFIER
+    const redshiftClusterIdentifier = env.REDSHIFT_CLUSTER_IDENTIFIER
 
     // - Create redshift cluster availability checker
     try {
@@ -58,8 +58,8 @@ export class MaterializedViewRefresherLambda {
     try {
       this.#redshiftDataClient = new RedshiftDataWrapper(
           redshiftClusterIdentifier,
-          process.env.REDSHIFT_DATABASE_NAME,
-          process.env.REDSHIFT_DB_USER,
+          env.REDSHIFT_DATABASE_NAME,
+          env.REDSHIFT_DB_USER,
         );
     } catch (error) {
       throw logAndRethrow(ERROR_MESSAGES.REDSHIFT_DATA_CLIENT_ERROR(), error );

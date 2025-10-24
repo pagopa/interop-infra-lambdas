@@ -3,7 +3,7 @@ import { MaterializedViewHelper } from '../../src/MaterializedViewHelper';
 import { RedshiftDataWrapper } from '../../src/RedshiftDataWrapper';
 import { RedshiftClusterChecker } from '../../src/RedshiftClusterChecker';
 import { ViewAndLevel } from '../../src/ViewAndLevel';
-import { MaterializedViewRefresherLambda } from '../../src//MaterializedViewRefresherLambda';
+import { MaterializedViewRefresherLambda } from '../../src/MaterializedViewRefresherLambda';
 
 // N.B.: This file is separated from index.test.ts because the use of mockImplementation 
 //       on RedshiftDataWrapper and MaterializedViewHelper interfere with others tests.

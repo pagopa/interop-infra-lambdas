@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MaterializedViewHelper } from '../../src/MaterializedViewHelper';
 import { RedshiftDataWrapper } from '../../src/RedshiftDataWrapper';
 import { ViewAndLevel } from '../../src/ViewAndLevel';
-import { MaterializedViewRefresherLambda } from '../../src//MaterializedViewRefresherLambda';
+import { MaterializedViewRefresherLambda } from '../../src/MaterializedViewRefresherLambda';
 
 // --- MOCK SETUP ---
 
