@@ -8,6 +8,55 @@ class AbortError extends Error {
 
 }
 
+/**
+ * The `ErrorHandler` class is designed to centralize error handling. 
+ * It enables differentiation between "aborting" errors (which should immediately halt
+ * execution) and "suppressed" errors (which are logged and deferred until finalization).
+ * 
+ * An usage example is:
+ 
+ ```typescript
+  const abortConditionChecker = async (err) => {
+      // Custom logic to decide if the process must be aborted
+      const isRedshiftClusterDown = await ...... ;
+      // If the RedshiftCluster is down we know the error root cause and is not possible 
+      // to continue with materialized view refresh.
+      return isRedshiftClusterDown ? 'Abort due redshift unavailability' : null; // 
+    };
+  
+  // - The error handler is 'informed' on how to decide if it have to abort the function
+  const errorHandler = new ErrorHandler( abortConditionChecker );
+  
+  // - The process must be executed _inside_ the `executeInterceptingAborts` method.
+  //   A method that catch aborting events (`AbortError`) and return the abortMEssage as 
+  //   call result; if no abort happen the `executeInterceptingAborts` method return the
+  //   inner function return value. In the following example it return 'Hello World'.
+  await errorHandler.executeInterceptingAborts(async () => {
+    
+    try {
+      // - Do something essential, the whole process can be aborted.
+    }
+    catch( error ) {
+      // - The essential action throw error, it is impossible to continue.
+      throw await errorHandler.checkAborting( error, "Description of the essential action" );
+    }
+    
+    try {
+      // - Do something not essential, the whole process can be aborted.
+    }
+    catch( error ) {
+      // - The not essential action throw error, we can continue
+      await errorHandler.lenientErrorHandler( error, "Description of the not essential action" );
+    }
+    
+    // - Check if there was errors intercepted by lenientErrorHandler. If at least one was intercepted
+    //   log all of them and re-throw an error.
+    errorHandler.finalizeErrorHandling();
+    return 'Hello World';
+  });
+
+```
+ */
 export class ErrorHandler {
   
   #abortChecker: (err: unknown)=> Promise<string|null>;

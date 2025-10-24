@@ -116,7 +116,7 @@ export class MaterializedViewRefresherLambda {
         await Promise.all( refreshing );
 
       } catch (error) {
-        throw await this.#errorHandler.checkAborting( error, ERROR_MESSAGES.REFRESHING_VIEWS() );
+        await this.#errorHandler.lenientErrorHandler( error, ERROR_MESSAGES.REFRESHING_VIEWS() );
       }
       console.log("End same level views refresh");
     }
@@ -128,7 +128,7 @@ export class MaterializedViewRefresherLambda {
         await this.#materializedViewHelper.updateLastMvRefreshInfo();
         console.log("End updating table with materialized view refresh timestamp");
       } catch (error) {
-        throw await this.#errorHandler.checkAborting( error, ERROR_MESSAGES.REDSHIFT_UPDATE_LAST_REFRESH_INFO_ERROR() );
+        await this.#errorHandler.lenientErrorHandler( error, ERROR_MESSAGES.REDSHIFT_UPDATE_LAST_REFRESH_INFO_ERROR() );
       }
       
       this.#errorHandler.finalizeErrorHandling();
@@ -139,6 +139,5 @@ export class MaterializedViewRefresherLambda {
       return "Refresh Completed, no refresh done!"
     }
   }
-
 
 }

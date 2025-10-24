@@ -179,7 +179,7 @@ describe('MaterializedViewRefresherLambda class', () => {
     mockRefreshOneMaterializedView.mockRejectedValue(refreshError);
 
     // ACT & ASSERT
-    await expect(handler()).rejects.toThrow("Error refreshing views\nError: Timeout while refreshing");
+    await expect(handler()).rejects.toThrow("Rethrow error that is not an 'abort message'\nError: Previously suppressed errors are present!!!! See ERROR logs");
   });
 
   it('should return "Aborted" if refreshing a view fails and the redshift cluster is not available', async () => {
@@ -234,7 +234,7 @@ describe('MaterializedViewRefresherLambda class', () => {
     mockUpdateLastMvRefreshInfo.mockRejectedValue(updateError);
 
     // ACT & ASSERT
-    await expect(handler()).rejects.toThrow('Error refreshing information about materialized views refresh\nError: Cannot update table');
+    await expect(handler()).rejects.toThrow("Rethrow error that is not an 'abort message'\nError: Previously suppressed errors are present!!!! See ERROR logs");
   });
 
   it('should return "Aborted" if updating the last refresh info fails and the redshift cluster is not available', async () => {
