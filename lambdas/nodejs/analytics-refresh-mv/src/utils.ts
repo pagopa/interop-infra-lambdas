@@ -53,6 +53,7 @@ export function parseSchemaList( jsonArrayStr: string | undefined): string[] {
 export function logAndRethrow(message: string, error?: unknown): Error {
   console.error(message);
   console.error(error);
+  //return new Error( message, { cause: error });
   return new Error( message + "\n" + error );
 }
 

@@ -1,254 +1,97 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { MaterializedViewHelper } from '../../src/MaterializedViewHelper';
-import { RedshiftDataWrapper } from '../../src/RedshiftDataWrapper';
-import { ViewAndLevel } from '../../src/ViewAndLevel';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
+// --- Mocks Setup ---
 
-// --- MOCK SETUP ---
+// 1. Create a mock function for the method we need to simulate.
+const mockExecuteMaterializedViewRefresh = vi.fn();
 
-// We spy on console.error to ensure it's called without polluting test logs.
-vi.spyOn(console, 'error').mockImplementation(() => {});
-vi.spyOn(console, 'warn').mockImplementation(() => {});
-vi.spyOn(console, 'log').mockImplementation(() => {});
-
-// Mock all dependencies before they are imported by the handler.
-
-// 1. Mock the grouping function
-const mockGroupMaterializedViews = vi.fn();
-vi.mock('../../src/groupMaterializedViews', () => ({
-  groupMaterializedViews: mockGroupMaterializedViews,
-}));
-
-// 2. Mock the wrapper classes and their methods
-vi.mock('../../src/RedshiftDataWrapper', );
-
-const mockListStaleMaterializedViews = vi.fn();
-const mockRefreshOneMaterializedView = vi.fn();
-const mockUpdateLastMvRefreshInfo = vi.fn();
-vi.mock('../../src/MaterializedViewHelper', () => {
+// 2. Mock the *entire* module.
+// This factory function replaces the module's exports.
+vi.mock('../../src/MaterializedViewRefresherLambda', () => {
+  // Return the mock structure for the module's exports
   return {
-    MaterializedViewHelper: vi.fn().mockImplementation(() => ({
-      listStaleMaterializedViews: mockListStaleMaterializedViews,
-      refreshOneMaterializedView: mockRefreshOneMaterializedView,
-      updateLastMvRefreshInfo: mockUpdateLastMvRefreshInfo,
-    })),
+    // Replace the exported class with a mock constructor
+    MaterializedViewRefresherLambda: vi.fn().mockImplementation(() => {
+      // Return an object that simulates the class *instance*
+      return {
+        executeMaterializedViewRefresh: mockExecuteMaterializedViewRefresh,
+      };
+    }),
   };
 });
 
-const mockFilterAll = vi.fn().mockImplementation( (v) => v );
-vi.mock('../../src/StaleMaterializedViewFilter', () => {
-  return {
-    StaleMaterializedViewFilter: vi.fn().mockImplementation(() => ({
-      filterAll: mockFilterAll
-    })),
-  };
-});
+// 3. Import the mocked class (which is now our vi.fn() from above)
+import { MaterializedViewRefresherLambda } from '../../src/MaterializedViewRefresherLambda';
 
+// 4. Import the handler *after* all mocks are set up
+let handler;
 
-const mockIsAvailable = vi.fn();
-vi.mock('../../src/RedshiftClusterChecker', () => {
-  return {
-    RedshiftClusterChecker: vi.fn().mockImplementation(() => ({
-      isAvailable: mockIsAvailable,
-    })),
-  };
-});
+// 5. Create a typed reference to the mocked class constructor
+const MaterializedViewRefresherLambdaMock = vi.mocked(
+  MaterializedViewRefresherLambda
+);
 
+// --- Tests ---
 
-// --- TEST SUITE ---
 describe('Lambda Handler', () => {
-  // Store original process.env
   const originalEnv = process.env;
 
-  // Dynamically import the handler AFTER mocks are set up
-  let handler;
-
-  beforeEach(async () => {
-    // Reset all mocks and environment variables before each test
+  beforeEach( async () => {
+    // Reset all mock states
     vi.clearAllMocks();
-    process.env = { ...originalEnv };
-    
+
+    // Set up a consistent process.env for the tests
+    process.env = {
+      ...originalEnv,
+      DB_HOST: 'test-db.local',
+    };
+
+    // Provide a default successful return value for the method
+    mockExecuteMaterializedViewRefresh.mockResolvedValue({
+      statusCode: 200,
+      body: 'Success',
+    });
+
     // Import the handler here to ensure it gets the mocked dependencies
     const module = await import('../../src/index'); // Adjust path if needed
     handler = module['handler'];
   });
 
   afterEach(() => {
-    // Restore original environment variables
+    // Restore the original environment
     process.env = originalEnv;
   });
 
-  // --- Mock Data ---
-  const ancillaryData = { 
-    incrementalRefreshNotSupported: false, 
-    lastRefreshStartTimeEpoch: 0, 
-    lastRefreshEndTimeEpoch: 1000, 
-    lastRefreshStartTime: "Start time", 
-    lastRefreshEndTime: "End time", 
-  }
-  const MOCK_VIEWS_LEVEL_1: ViewAndLevel[] = [
-    { mvSchemaName: 's1', mvName: 'view_a', mvLevel: 1, ...ancillaryData },
-    { mvSchemaName: 's1', mvName: 'view_b', mvLevel: 1, ...ancillaryData },
-  ];
-  const MOCK_VIEWS_LEVEL_2: ViewAndLevel[] = [
-    { mvSchemaName: 's2', mvName: 'view_c', mvLevel: 2, ...ancillaryData },
-  ];
+  it('should instantiate MaterializedViewRefresherLambda with process.env', async () => {
+    await handler();
 
-  // --- HAPPY PATH TEST ---
-  it('should execute all steps successfully in the correct order', async () => {
-    // ARRANGE
-    // 1. Set up environment variables
-    process.env.VIEWS_SCHEMAS_NAMES = '["schema1", "schema2"]';
-    process.env.PROCEDURES_SCHEMA = 'procs';
-    process.env.REDSHIFT_CLUSTER_IDENTIFIER = 'test-cluster';
-    process.env.REDSHIFT_DATABASE_NAME = 'test-db';
-    process.env.REDSHIFT_DB_USER = 'test-user';
+    // Assert that our *mock constructor* was called with process.env
+    // This proves the real constructor was never touched.
+    expect(MaterializedViewRefresherLambdaMock).toHaveBeenCalledOnce();
+    expect(MaterializedViewRefresherLambdaMock).toHaveBeenCalledWith(process.env);
+  });
 
-    // 2. Configure mock return values
-    mockIsAvailable.mockResolvedValue(true);
-    mockListStaleMaterializedViews.mockResolvedValue([...MOCK_VIEWS_LEVEL_1, ...MOCK_VIEWS_LEVEL_2]);
-    mockGroupMaterializedViews.mockReturnValue([MOCK_VIEWS_LEVEL_1, MOCK_VIEWS_LEVEL_2]);
-    mockRefreshOneMaterializedView.mockResolvedValue('refreshed');
-    mockUpdateLastMvRefreshInfo.mockResolvedValue('updated');
+  it('should call executeMaterializedViewRefresh on the mock instance', async () => {
+    await handler();
 
-    // ACT
+    // Assert that the method on the mock *instance* was called
+    expect(mockExecuteMaterializedViewRefresh).toHaveBeenCalledOnce();
+  });
+
+  it('should return the successful result from executeMaterializedViewRefresh', async () => {
+    const mockResult = { statusCode: 200, message: 'Refresh complete' };
+    mockExecuteMaterializedViewRefresh.mockResolvedValue(mockResult);
+
     const result = await handler();
 
-    // ASSERT
-    // Verify the sequence of calls
-    expect(RedshiftDataWrapper).toHaveBeenCalledWith('test-cluster', 'test-db', 'test-user');
-    expect(MaterializedViewHelper).toHaveBeenCalledWith(expect.any(RedshiftDataWrapper), ['schema1', 'schema2'], 'procs');
-    expect(mockListStaleMaterializedViews).toHaveBeenCalledOnce();
-    expect(mockFilterAll).toHaveBeenCalledOnce();
-    expect(mockGroupMaterializedViews).toHaveBeenCalledOnce();
-    
-    // Check that refresh was called for each view (3 views in total)
-    expect(mockRefreshOneMaterializedView).toHaveBeenCalledTimes(3);
-    expect(mockRefreshOneMaterializedView).toHaveBeenCalledWith('s1', 'view_a');
-    expect(mockRefreshOneMaterializedView).toHaveBeenCalledWith('s1', 'view_b');
-    expect(mockRefreshOneMaterializedView).toHaveBeenCalledWith('s2', 'view_c');
-    
-    expect(mockUpdateLastMvRefreshInfo).toHaveBeenCalledOnce();
-
-    expect(result).toBe("Refresh Completed");
+    expect(result).toBe(mockResult);
   });
 
-  // --- FAILURE SCENARIO TESTS ---
-  it('should throw an error if a required environment variable is missing', async () => {
-    // ARRANGE
-    process.env.VIEWS_SCHEMAS_NAMES = '[]';
-    process.env.PROCEDURES_SCHEMA = undefined;
-    
-    // ACT & ASSERT
-    await expect(handler()).rejects.toThrow("Parameter 'PROCEDURES_SCHEMA' is required.\nundefined");
+  it('should propagate errors from executeMaterializedViewRefresh', async () => {
+    const mockError = new Error('Database connection failed');
+    mockExecuteMaterializedViewRefresh.mockRejectedValue(mockError);
+
+    // Assert that the handler rejects with the same error
+    await expect(handler()).rejects.toThrow(mockError);
   });
-  
-  it('should throw if listing stale views fails', async () => {
-    // ARRANGE
-    process.env.VIEWS_SCHEMAS_NAMES = '[]';
-    process.env.PROCEDURES_SCHEMA = 'procs';
-    const listError = new Error('Redshift API error');
-    mockIsAvailable.mockResolvedValue(true);
-    mockListStaleMaterializedViews.mockRejectedValue(listError);
-
-    // ACT & ASSERT
-    await expect(handler()).rejects.toThrow("Error listing materialized views\nError: Redshift API error");
-  });
-
-  it('should return "Aborted" if listing stale views fail and the redshift cluster is not available', async () => {
-    // ARRANGE
-    process.env.VIEWS_SCHEMAS_NAMES = '[]';
-    process.env.PROCEDURES_SCHEMA = 'procs';
-    const listError = new Error('Redshift API error');
-    mockIsAvailable.mockResolvedValue(false);
-    mockListStaleMaterializedViews.mockRejectedValue(listError);
-
-    // ACT & ASSERT
-    await expect(handler()).resolves.toBe("Aborted");
-  });
-
-  it('should throw if refreshing a view fails', async () => {
-    // ARRANGE
-    process.env.VIEWS_SCHEMAS_NAMES = '[]';
-    process.env.PROCEDURES_SCHEMA = 'procs';
-    const refreshError = new Error('Timeout while refreshing');
-    mockIsAvailable.mockResolvedValue(true);
-    mockListStaleMaterializedViews.mockResolvedValue([ ...MOCK_VIEWS_LEVEL_1 ]);
-    mockGroupMaterializedViews.mockReturnValue([MOCK_VIEWS_LEVEL_1]); // Provide views to refresh
-    mockRefreshOneMaterializedView.mockRejectedValue(refreshError);
-
-    // ACT & ASSERT
-    await expect(handler()).rejects.toThrow("Error refreshing views\nError: Timeout while refreshing");
-  });
-
-  it('should return "Aborted" if refreshing a view fails and the redshift cluster is not available', async () => {
-    // ARRANGE
-    process.env.VIEWS_SCHEMAS_NAMES = '[]';
-    process.env.PROCEDURES_SCHEMA = 'procs';
-    const refreshError = new Error('Timeout while refreshing');
-    mockIsAvailable.mockResolvedValue(false);
-    mockListStaleMaterializedViews.mockResolvedValue([ ...MOCK_VIEWS_LEVEL_1 ]);
-    mockGroupMaterializedViews.mockReturnValue([MOCK_VIEWS_LEVEL_1]); // Provide views to refresh
-    mockRefreshOneMaterializedView.mockRejectedValue(refreshError);
-
-    // ACT & ASSERT
-    await expect(handler()).resolves.toBe("Aborted");
-  });
-  
-  it('should skip updating the last refresh info if no materialized views are refreshed', async () => {
-    // ARRANGE
-    
-    process.env.VIEWS_SCHEMAS_NAMES = '["a"]';
-    process.env.PROCEDURES_SCHEMA = 'procs';
-    const updateError = new Error('Cannot update table');
-    mockIsAvailable.mockResolvedValue(true);
-    mockListStaleMaterializedViews.mockResolvedValue([]);
-    mockGroupMaterializedViews.mockReturnValue([]); // No views to refresh, skip final step
-    mockUpdateLastMvRefreshInfo.mockRejectedValue(updateError);
-
-    // ACT
-    const result = await handler();
-
-    // ASSERT
-    // Verify the sequence of calls
-    expect(mockListStaleMaterializedViews).toHaveBeenCalledOnce();
-    expect(mockFilterAll).toHaveBeenCalledOnce();
-    expect(mockGroupMaterializedViews).toHaveBeenCalledOnce();
-    expect(mockRefreshOneMaterializedView).toHaveBeenCalledTimes( 0 );
-    expect(mockUpdateLastMvRefreshInfo).toHaveBeenCalledTimes( 0 );
-    expect(result).toBe("Refresh Completed, no refresh done!");
-  });
-
-  it('should throw if updating the last refresh info fails', async () => {
-    // ARRANGE
-    
-    process.env.VIEWS_SCHEMAS_NAMES = '["a"]';
-    process.env.PROCEDURES_SCHEMA = 'procs';
-    const updateError = new Error('Cannot update table');
-    mockIsAvailable.mockResolvedValue(true);
-    mockListStaleMaterializedViews.mockResolvedValue( MOCK_VIEWS_LEVEL_2 );
-    mockGroupMaterializedViews.mockReturnValue([ MOCK_VIEWS_LEVEL_2 ]);
-    mockRefreshOneMaterializedView.mockResolvedValue('refreshed');
-    mockUpdateLastMvRefreshInfo.mockRejectedValue(updateError);
-
-    // ACT & ASSERT
-    await expect(handler()).rejects.toThrow('Error refreshing information about materialized views refresh\nError: Cannot update table');
-  });
-
-  it('should return "Aborted" if updating the last refresh info fails and the redshift cluster is not available', async () => {
-    // ARRANGE
-    
-    process.env.VIEWS_SCHEMAS_NAMES = '["a"]';
-    process.env.PROCEDURES_SCHEMA = 'procs';
-    const updateError = new Error('Cannot update table');
-    mockIsAvailable.mockResolvedValue(false);
-    mockListStaleMaterializedViews.mockResolvedValue( MOCK_VIEWS_LEVEL_2 );
-    mockGroupMaterializedViews.mockReturnValue([ MOCK_VIEWS_LEVEL_2 ]);
-    mockRefreshOneMaterializedView.mockResolvedValue('refreshed');
-    mockUpdateLastMvRefreshInfo.mockRejectedValue(updateError);
-
-    // ACT & ASSERT
-    await expect(handler()).resolves.toBe("Aborted")
-  });
-
 });
