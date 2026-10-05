@@ -128,6 +128,7 @@ export class AwsQuickSightWrapper {
 
   async createRefreshSchedule( datasetSummary: DataSetSummary, refreshParams: RefreshParameters ) {
     const dataSetId = datasetSummary.DataSetId;
+    const index = refreshParams.index || 0;
 
     const refreshType = refreshParams.refreshType;
     if( ![ "INCREMENTAL_REFRESH", "FULL_REFRESH"].includes( refreshType )) {
@@ -136,14 +137,14 @@ export class AwsQuickSightWrapper {
       throw new Error( msg );
     }
 
-    const scheduleIndex = computeScheduleSuffix( refreshParams.index || 0);
+    const scheduleId = dataSetId + "-schedule" + computeScheduleSuffix( index );
 
     try {
       const scheduleConfig : CreateRefreshScheduleRequest = { 
         AwsAccountId: await this.#sts.getAwsAccountId(),
         DataSetId: dataSetId,
         Schedule: {
-          ScheduleId: dataSetId + "-schedule" + scheduleIndex,
+          ScheduleId: scheduleId,
           ScheduleFrequency: {
             Interval: refreshParams.refreshInterval as RefreshInterval
           },

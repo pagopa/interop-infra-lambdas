@@ -127,10 +127,10 @@ describe('QuickSightAlertScheduler', () => {
         { refreshInterval: "DAILY", refreshType: "FULL_REFRESH", index: 0 }
       );
       expect(mockQuickSightWrapper.createRefreshSchedule).toHaveBeenCalledWith(dataSetWithTag, 
-        { refreshInterval: "MIN15", refreshType: "INCREMENTAL_REFRESH", index: 1 }
+        { refreshInterval: "MINUTE15", refreshType: "INCREMENTAL_REFRESH", index: 1 }
       );
       expect(mockQuickSightWrapper.createRefreshSchedule).toHaveBeenCalledWith(dataSetWithTag, 
-        { refreshInterval: "MIN30", refreshType: "INCREMENTAL_REFRESH", index: 2 }
+        { refreshInterval: "MINUTE30", refreshType: "INCREMENTAL_REFRESH", index: 2 }
       );
       expect(mockQuickSightWrapper.createRefreshSchedule).toHaveBeenCalledWith(dataSetWithTag, 
         { refreshInterval: "HOURLY", refreshType: "INCREMENTAL_REFRESH", index: 3 }
