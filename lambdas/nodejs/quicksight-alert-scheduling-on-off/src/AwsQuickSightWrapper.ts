@@ -10,7 +10,7 @@ import {
     RefreshInterval
 } from "@aws-sdk/client-quicksight";
 import { AwsStsWrapper } from "./AwsStsWrapper";
-import { computeScheduleSuffix, fromKeyValueArrayToObject } from './Utils'
+import { computeScheduleSuffix, fromKeyValueArrayToObject, delay } from './Utils'
 
 export type DataSetSummaryWithTags = DataSetSummary & { tags:{ [key: string]: string | undefined }}
 export type RefreshParameters = {
@@ -152,6 +152,7 @@ export class AwsQuickSightWrapper {
         }
       }
 
+      await delay(100);
       await this.#quicksight.send( new CreateRefreshScheduleCommand( scheduleConfig ) );
 
       console.log(` - Successfully applied schedule to '${datasetSummary.Arn}'. Schedule data:\n`, scheduleConfig );
@@ -175,6 +176,7 @@ export class AwsQuickSightWrapper {
       const scheduleId = dataSetId + "-schedule" + computeScheduleSuffix( index );
       console.log(` Removing schedule ${scheduleId} to '${datasetSummary.Arn}' index ${index}.`);
 
+      await delay( 100 );
       await this.#quicksight.send(
         new DeleteRefreshScheduleCommand({ 
           AwsAccountId: await this.#sts.getAwsAccountId(),

@@ -24,3 +24,7 @@ export function computeScheduleSuffix( index: number ): string {
   }
   return result;
 }
+
+export async function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
