@@ -7,7 +7,8 @@ import {
     IngestionType, 
     DeleteRefreshScheduleCommand, 
     CreateRefreshScheduleRequest,
-    RefreshInterval
+    RefreshInterval,
+    DescribeRefreshScheduleCommand
 } from "@aws-sdk/client-quicksight";
 import { AwsStsWrapper } from "./AwsStsWrapper";
 import { computeScheduleSuffix, fromKeyValueArrayToObject, delay } from './Utils'
@@ -176,14 +177,17 @@ export class AwsQuickSightWrapper {
       const scheduleId = dataSetId + "-schedule" + computeScheduleSuffix( index );
       console.log(` Removing schedule ${scheduleId} to '${datasetSummary.Arn}' index ${index}.`);
 
+      const params = { 
+        AwsAccountId: await this.#sts.getAwsAccountId(),
+        DataSetId: dataSetId,
+        ScheduleId: scheduleId
+      };
+      
+      const scheduleExsist = await this.#hasSpecificSchedule( params );
       await delay( 100 );
-      await this.#quicksight.send(
-        new DeleteRefreshScheduleCommand({ 
-          AwsAccountId: await this.#sts.getAwsAccountId(),
-          DataSetId: dataSetId,
-          ScheduleId: scheduleId
-        })
-      );
+      if( scheduleExsist ) {
+        await this.#quicksight.send( new DeleteRefreshScheduleCommand( params ));
+      }
 
       console.log(` - Successfully removed schedule to '${datasetSummary.Arn}' index ${index}.`);
     } catch (error: unknown) {
@@ -195,6 +199,25 @@ export class AwsQuickSightWrapper {
         console.error(` ERROR: Failed to update '${datasetSummary.Arn}':`, error);
         throw error;
       }
+    }
+  }
+
+  async #hasSpecificSchedule( params: {
+    AwsAccountId: string, 
+    DataSetId: string | undefined, 
+    ScheduleId: string
+  }): Promise<boolean> {
+    try {
+      await this.#quicksight.send(
+        new DescribeRefreshScheduleCommand( params )
+      );
+      return true; // Schedule exists
+    } catch (error: unknown) {
+      const errorName = (error as { name?: string }).name;
+      if (errorName === "ResourceNotFoundException") {
+        return false; // Schedule does not exist
+      }
+      throw error; // Re-throw unhandled errors (e.g., ThrottlingException, AccessDenied)
     }
   }
 

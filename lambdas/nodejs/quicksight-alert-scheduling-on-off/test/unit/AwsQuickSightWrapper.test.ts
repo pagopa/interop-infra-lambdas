@@ -7,6 +7,7 @@ import {
   ListTagsForResourceCommand,
   CreateRefreshScheduleCommand,
   DeleteRefreshScheduleCommand,
+  DescribeRefreshScheduleCommand,
 } from '@aws-sdk/client-quicksight';
 
 // We spy on console.error to ensure it's called without polluting test logs.
@@ -31,6 +32,7 @@ vi.mock('@aws-sdk/client-quicksight', async (importOriginal) => {
     ListTagsForResourceCommand: original.ListTagsForResourceCommand,
     CreateRefreshScheduleCommand: original.CreateRefreshScheduleCommand,
     DeleteRefreshScheduleCommand: original.DeleteRefreshScheduleCommand,
+    DescribeRefreshScheduleCommand: original.DescribeRefreshScheduleCommand,
   };
 });
 
@@ -257,13 +259,21 @@ describe('AwsQuickSightWrapper', () => {
   describe('deleteRefreshSchedule', () => {
     it('should call the send command with the correct parameters', async () => {
       const wrapper = new AwsQuickSightWrapper(mockStsWrapper);
-      mockQuicksightSend.mockResolvedValue({})
+      //mockQuicksightSend.mockResolvedValue({})
+      mockQuicksightSend.mockImplementation(async (command) => {
+        if (command instanceof DescribeRefreshScheduleCommand) {
+          return {  };
+        }
+        if (command instanceof DeleteRefreshScheduleCommand) {
+          return {  };
+        }
+      });
       
       // ACT
       await wrapper.deleteRefreshSchedule(spiceDataSet);
       
       // ASSERT
-      expect(mockQuicksightSend).toHaveBeenCalledOnce();
+      expect(mockQuicksightSend).toHaveBeenCalledTimes( 2 );
       const sentCommand = mockQuicksightSend.mock.calls[0][0] as DeleteRefreshScheduleCommand;
       expect(sentCommand.input.AwsAccountId).toBe(MOCK_AWS_ACCOUNT_ID);
       expect(sentCommand.input.DataSetId).toBe(spiceDataSet.DataSetId);
@@ -278,7 +288,7 @@ describe('AwsQuickSightWrapper', () => {
       // ACT & ASSERT: The method should catch this error and resolve successfully.
       await expect(wrapper.deleteRefreshSchedule(spiceDataSet)).resolves.toBeUndefined();
 
-      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy).toHaveBeenCalledTimes( 0 );
     });
 
     it('should rethrow errors', async () => {
