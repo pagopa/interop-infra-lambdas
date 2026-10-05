@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { fromKeyValueArrayToObject, computeScheduleSuffix, KeyValue } from '../../src/Utils';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { fromKeyValueArrayToObject, computeScheduleSuffix, KeyValue, delay } from '../../src/Utils';
 
 describe('fromKeyValueArrayToObject', () => {
   it('should convert a KeyValue array into a plain key-value object', () => {
@@ -74,5 +74,50 @@ describe('computeScheduleSuffix', () => {
     expect(() => computeScheduleSuffix(index)).toThrowError(
       `Schedule index "${index}" not supported! Expected one of 0 1 2 3 4`
     );
+  });
+});
+
+describe('delay', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('should resolve only after the specified time has elapsed', async () => {
+    let resolved = false;
+
+    // Start the delay promise
+    const promise = delay(1000).then(() => {
+      resolved = true;
+    });
+
+    // Should not be resolved immediately
+    expect(resolved).toBe(false);
+
+    // Advance time by 999ms (1ms short)
+    await vi.advanceTimersByTimeAsync(999);
+    expect(resolved).toBe(false);
+
+    // Advance the remaining 1ms
+    await vi.advanceTimersByTimeAsync(1);
+    await promise;
+
+    expect(resolved).toBe(true);
+  });
+
+  it('should resolve correctly for a 0 millisecond delay', async () => {
+    let resolved = false;
+
+    const promise = delay(0).then(() => {
+      resolved = true;
+    });
+
+    await vi.advanceTimersByTimeAsync(0);
+    await promise;
+
+    expect(resolved).toBe(true);
   });
 });
