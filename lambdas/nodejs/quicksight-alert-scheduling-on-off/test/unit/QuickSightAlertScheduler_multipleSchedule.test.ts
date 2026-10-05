@@ -79,10 +79,10 @@ describe('QuickSightAlertScheduler', () => {
             return 'DAILY';
           }
           else if ( tagName === 'RefreshInterval_2') {
-            return 'MIN15';
+            return 'MINUTE15';
           }
           else if ( tagName === 'RefreshInterval_3') {
-            return 'MIN30';
+            return 'MINUTE30';
           }
           else if ( tagName === 'RefreshInterval_4') {
             return 'HOURLY';
