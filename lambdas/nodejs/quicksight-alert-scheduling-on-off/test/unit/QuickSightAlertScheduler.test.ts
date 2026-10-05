@@ -35,6 +35,7 @@ describe('QuickSightAlertScheduler', () => {
     mockQuickSightWrapper = {
       listScheduleSupportingDataSets: vi.fn(),
       getTagValue: vi.fn(),
+      hasTagsByPrefix: vi.fn(),
       createRefreshSchedule: vi.fn(),
       deleteRefreshSchedule: vi.fn(),
     } as unknown as AwsQuickSightWrapper;
@@ -51,7 +52,7 @@ describe('QuickSightAlertScheduler', () => {
         dataSetWithoutTag,
       ]);
       
-      // 2. Simulate the getTagValue behavior to drive the filtering logic.
+      // 2.a. Simulate the getTagValue behavior to drive the filtering logic.
       vi.mocked(mockQuickSightWrapper.getTagValue).mockImplementation((dataset, tagName) => {
         // Return the tag value if it's the one we're looking for.
         if (dataset.DataSetId === dataSetWithTag.DataSetId && tagName === 'RefreshType') {
@@ -59,6 +60,16 @@ describe('QuickSightAlertScheduler', () => {
         }
         // Return undefined for the dataset without the tag.
         return undefined;
+      });
+
+      // 2.b. Simulate the hasTagsByPrefix behavior to drive the filtering logic.
+      vi.mocked(mockQuickSightWrapper.hasTagsByPrefix).mockImplementation((dataset, tagName) => {
+        // Return the tag value if it's the one we're looking for.
+        const result = (
+          dataset.DataSetId === dataSetWithTag.DataSetId 
+          && tagName === 'RefreshType'
+        );
+        return result;
       });
 
       // Create the class instance, injecting our mock dependency.
@@ -72,7 +83,7 @@ describe('QuickSightAlertScheduler', () => {
       expect(mockQuickSightWrapper.createRefreshSchedule).toHaveBeenCalledOnce();
       
       // Check that it was called with the correct dataset and the value from its tag.
-      const scheduleConfig = { refreshInterval: "HOURLY", refreshType: "FULL_REFRESH" };
+      const scheduleConfig = { refreshInterval: "HOURLY", refreshType: "FULL_REFRESH", index: 0 };
       expect(mockQuickSightWrapper.createRefreshSchedule).toHaveBeenCalledWith(dataSetWithTag, scheduleConfig );
       
       // Ensure the delete method was never touched.
@@ -87,7 +98,7 @@ describe('QuickSightAlertScheduler', () => {
         dataSetWithoutTag,
       ]);
       
-      // 2. Simulate the getTagValue behavior to drive the filtering logic.
+      // 2.a. Simulate the getTagValue behavior to drive the filtering logic.
       vi.mocked(mockQuickSightWrapper.getTagValue).mockImplementation((dataset, tagName) => {
         // Return the tag value if it's the one we're looking for.
         if (dataset.DataSetId === dataSetWithTag.DataSetId && tagName === 'RefreshType') {
@@ -95,6 +106,15 @@ describe('QuickSightAlertScheduler', () => {
         }
         // Return undefined for the dataset without the tag.
         return undefined;
+      });
+      // 2.b. Simulate the hasTagsByPrefix behavior to drive the filtering logic.
+      vi.mocked(mockQuickSightWrapper.hasTagsByPrefix).mockImplementation((dataset, tagName) => {
+        // Return the tag value if it's the one we're looking for.
+        const result = (
+          dataset.DataSetId === dataSetWithTag.DataSetId 
+          && tagName === 'RefreshType'
+        );
+        return result;
       });
 
       // Create the class instance, injecting our mock dependency.
@@ -108,7 +128,7 @@ describe('QuickSightAlertScheduler', () => {
       expect(mockQuickSightWrapper.createRefreshSchedule).toHaveBeenCalledOnce();
       
       // Check that it was called with the correct dataset and the value from its tag.
-      const scheduleConfig = { refreshInterval: "MINUTE15", refreshType: "INCREMENTAL_REFRESH" };
+      const scheduleConfig = { refreshInterval: "MINUTE15", refreshType: "INCREMENTAL_REFRESH", index: 0 };
       expect(mockQuickSightWrapper.createRefreshSchedule).toHaveBeenCalledWith(dataSetWithTag, scheduleConfig );
       
       // Ensure the delete method was never touched.
@@ -123,7 +143,7 @@ describe('QuickSightAlertScheduler', () => {
         dataSetWithoutTag,
       ]);
       
-      // 2. Simulate the getTagValue behavior to drive the filtering logic.
+      // 2.a. Simulate the getTagValue behavior to drive the filtering logic.
       vi.mocked(mockQuickSightWrapper.getTagValue).mockImplementation((dataset, tagName) => {
         // Return the tag value if it's the one we're looking for.
         if (dataset.DataSetId === dataSetWithTag.DataSetId && tagName === 'RefreshType') {
@@ -135,6 +155,16 @@ describe('QuickSightAlertScheduler', () => {
         // Return undefined for the dataset without the tag.
         return undefined;
       });
+      // 2.b. Simulate the hasTagsByPrefix behavior to drive the filtering logic.
+      vi.mocked(mockQuickSightWrapper.hasTagsByPrefix).mockImplementation((dataset, tagName) => {
+        // Return the tag value if it's the one we're looking for.
+        const result = (
+          dataset.DataSetId === dataSetWithTag.DataSetId 
+          && tagName === 'RefreshType'
+        );
+        return result;
+      });
+
 
       // Create the class instance, injecting our mock dependency.
       const scheduler = new QuickSightAlertScheduler(mockQuickSightWrapper);
@@ -147,7 +177,7 @@ describe('QuickSightAlertScheduler', () => {
       expect(mockQuickSightWrapper.createRefreshSchedule).toHaveBeenCalledOnce();
       
       // Check that it was called with the correct dataset and the value from its tag.
-      const scheduleConfig = { refreshInterval: "DAILY", refreshType: "INCREMENTAL_REFRESH" };
+      const scheduleConfig = { refreshInterval: "DAILY", refreshType: "INCREMENTAL_REFRESH", index: 0 };
       expect(mockQuickSightWrapper.createRefreshSchedule).toHaveBeenCalledWith(dataSetWithTag, scheduleConfig );
       
       // Ensure the delete method was never touched.
@@ -188,6 +218,14 @@ describe('QuickSightAlertScheduler', () => {
         }
         return undefined;
       });
+      vi.mocked(mockQuickSightWrapper.hasTagsByPrefix).mockImplementation((dataset, tagName) => {
+        // Return the tag value if it's the one we're looking for.
+        const result = (
+          dataset.DataSetId === dataSetWithTag.DataSetId 
+          && tagName === 'RefreshType'
+        );
+        return result;
+      });
 
       const scheduler = new QuickSightAlertScheduler(mockQuickSightWrapper);
       
@@ -195,11 +233,15 @@ describe('QuickSightAlertScheduler', () => {
       await scheduler.deactivateScheduling();
       
       // ASSERT
-      // Check that the schedule deletion was attempted ONLY ONCE.
-      expect(mockQuickSightWrapper.deleteRefreshSchedule).toHaveBeenCalledOnce();
+      // Check that the schedule deletion was attempted 5 times for each dataset (1 x 5 = 5).
+      expect(mockQuickSightWrapper.deleteRefreshSchedule).toHaveBeenCalledTimes( 5 );
       
       // Check that it was called with the correct dataset.
-      expect(mockQuickSightWrapper.deleteRefreshSchedule).toHaveBeenCalledWith(dataSetWithTag);
+      expect(mockQuickSightWrapper.deleteRefreshSchedule).toHaveBeenCalledWith(dataSetWithTag, 0);
+      expect(mockQuickSightWrapper.deleteRefreshSchedule).toHaveBeenCalledWith(dataSetWithTag, 1);
+      expect(mockQuickSightWrapper.deleteRefreshSchedule).toHaveBeenCalledWith(dataSetWithTag, 2);
+      expect(mockQuickSightWrapper.deleteRefreshSchedule).toHaveBeenCalledWith(dataSetWithTag, 3);
+      expect(mockQuickSightWrapper.deleteRefreshSchedule).toHaveBeenCalledWith(dataSetWithTag, 4);
       
       // Ensure the create method was never touched.
       expect(mockQuickSightWrapper.createRefreshSchedule).not.toHaveBeenCalled();

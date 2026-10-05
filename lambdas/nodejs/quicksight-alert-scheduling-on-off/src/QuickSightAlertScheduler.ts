@@ -1,7 +1,18 @@
-import { AwsQuickSightWrapper, DataSetSummaryWithTags } from "./AwsQuickSightWrapper";
+import { 
+  AwsQuickSightWrapper, 
+  DataSetSummaryWithTags,
+  RefreshParameters,
+  refreshParameterFactory
+} from "./AwsQuickSightWrapper";
+import { computeScheduleSuffix } from './Utils'
 
-const REFRESH_TYPE_TAG_NAME = "RefreshType"
-const REFRESH_INTERVAL_TAG_NAME = "RefreshInterval"
+const REFRESH_TYPE_TAG_PREFIX =
+  process.env.REFRESH_TYPE_TAG_PREFIX ?? "RefreshType";
+
+const REFRESH_INTERVAL_TAG_PREFIX =
+  process.env.REFRESH_INTERVAL_TAG_PREFIX ?? "RefreshInterval";
+
+const MAX_REFRESH_SCHEDULER_QUANTITY = 5;
 
 export class QuickSightAlertScheduler {
 
@@ -20,7 +31,7 @@ export class QuickSightAlertScheduler {
     console.log( JSON.stringify( dataSetsWithTags, null, 2 ) );
 
     const dataSetsToBeModified = dataSetsWithTags.filter(
-      (dataSetsWithTags) => this.#qs.getTagValue( dataSetsWithTags, REFRESH_TYPE_TAG_NAME )
+      (dataSetsWithTags) => this.#qs.hasTagsByPrefix( dataSetsWithTags, REFRESH_TYPE_TAG_PREFIX )
     )
 
     console.log( "DataSet with RefreshType tag" );
@@ -30,27 +41,41 @@ export class QuickSightAlertScheduler {
     return await Promise.all( actionsPromises )
   }
 
-  #defineScheduling( dataSetWithTags: DataSetSummaryWithTags ) {
-    const refreshType = this.#qs.getTagValue( dataSetWithTags, REFRESH_TYPE_TAG_NAME );
-    if( ! refreshType ) {
-      const msg = "Can't schedule DataSet " + dataSetWithTags.Arn + " do not has tag RefreshType";
-      console.error( msg );
-      throw new Error( msg );
+  #defineScheduling( dataSetWithTags: DataSetSummaryWithTags ): RefreshParameters[] {
+    const result: RefreshParameters[] = [];
+
+    for( let index = 0; index < MAX_REFRESH_SCHEDULER_QUANTITY; index += 1 ) {
+      const suffix = computeScheduleSuffix( index );
+
+      const { refreshType, refreshInterval} = this.#refreshInfoFromTags( dataSetWithTags, suffix );
+      
+      if( refreshType ) {
+        result.push( refreshParameterFactory( index, refreshType, refreshInterval ));
+      }
+      else {
+        if ( index == 0 ) { // - The first must be present
+          const msg = "Can't schedule DataSet " + dataSetWithTags.Arn + " do not has tag RefreshType";
+          console.error( msg );
+          throw new Error( msg );
+        }
+      }
     }
-    
-    let refreshInterval = this.#qs.getTagValue( dataSetWithTags, REFRESH_INTERVAL_TAG_NAME );
-    if( !refreshInterval ) {
-      refreshInterval = (refreshType == "INCREMENTAL_REFRESH" ? "MINUTE15" : "HOURLY");
-    }
-    
-    return { refreshType, refreshInterval }
+    return result;
+  }
+
+  #refreshInfoFromTags( dataSetWithTags: DataSetSummaryWithTags, suffix: string ) {
+    const type = this.#qs.getTagValue( dataSetWithTags, REFRESH_TYPE_TAG_PREFIX + suffix );
+    const interval = this.#qs.getTagValue( dataSetWithTags, REFRESH_INTERVAL_TAG_PREFIX + suffix);    
+    return { refreshType: type, refreshInterval: interval };
   }
 
   async activateScheduling( ) {
     await this.#doForEachScheduleSupportingDataSet(
       async (dataSetWithTags) => {
-        const refreshParams = this.#defineScheduling( dataSetWithTags );
-        await this.#qs.createRefreshSchedule( dataSetWithTags, refreshParams )
+        const refreshParamsArray = this.#defineScheduling( dataSetWithTags );
+        for( const refreshParams of refreshParamsArray ) {
+          await this.#qs.createRefreshSchedule( dataSetWithTags, refreshParams )
+        }
       }
     )
   }
@@ -58,7 +83,9 @@ export class QuickSightAlertScheduler {
   async deactivateScheduling( ) {
     await this.#doForEachScheduleSupportingDataSet(
       async (dataSetWithTags) => {
-        await this.#qs.deleteRefreshSchedule( dataSetWithTags )
+        for( let index = 0; index < MAX_REFRESH_SCHEDULER_QUANTITY; index += 1 ) {
+          await this.#qs.deleteRefreshSchedule( dataSetWithTags, index )
+        }
       }
     )
   }

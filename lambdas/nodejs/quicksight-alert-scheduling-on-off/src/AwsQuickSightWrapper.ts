@@ -10,11 +10,34 @@ import {
     RefreshInterval
 } from "@aws-sdk/client-quicksight";
 import { AwsStsWrapper } from "./AwsStsWrapper";
+import { computeScheduleSuffix, fromKeyValueArrayToObject } from './Utils'
 
 export type DataSetSummaryWithTags = DataSetSummary & { tags:{ [key: string]: string | undefined }}
 export type RefreshParameters = {
   refreshType: string
-  refreshInterval: string
+  refreshInterval: string,
+  index: number
+}
+
+export function refreshParameterFactory( 
+  index: number, 
+  refreshType: string, 
+  refreshInterval: string | undefined
+): RefreshParameters {
+  
+  let defaultedRefreshInterval;
+  if( refreshInterval ) {
+    defaultedRefreshInterval = refreshInterval;
+  }
+  else {
+    defaultedRefreshInterval = (refreshType == "INCREMENTAL_REFRESH" ? "MINUTE15" : "HOURLY");
+  }
+      
+  return {
+    refreshType: refreshType,
+    refreshInterval: defaultedRefreshInterval,
+    index: index
+  }
 }
 
 export class AwsQuickSightWrapper {
@@ -93,6 +116,16 @@ export class AwsQuickSightWrapper {
     return dataSetWithTag.tags[ tagName ];
   }
 
+  hasTagsByPrefix( dataSetWithTag: DataSetSummaryWithTags, tagPrefix: string ): boolean {
+    let result: boolean = false;
+    for (const [key, value] of Object.entries( dataSetWithTag.tags )) {
+      if( value && key.startsWith( tagPrefix )) {
+        result = true;
+      }
+    }
+    return result;
+  }
+
   async createRefreshSchedule( datasetSummary: DataSetSummary, refreshParams: RefreshParameters ) {
     const dataSetId = datasetSummary.DataSetId;
 
@@ -103,12 +136,14 @@ export class AwsQuickSightWrapper {
       throw new Error( msg );
     }
 
+    const scheduleIndex = computeScheduleSuffix( refreshParams.index || 0);
+
     try {
       const scheduleConfig : CreateRefreshScheduleRequest = { 
         AwsAccountId: await this.#sts.getAwsAccountId(),
         DataSetId: dataSetId,
         Schedule: {
-          ScheduleId: dataSetId + "-schedule",
+          ScheduleId: dataSetId + "-schedule" + scheduleIndex,
           ScheduleFrequency: {
             Interval: refreshParams.refreshInterval as RefreshInterval
           },
@@ -132,23 +167,26 @@ export class AwsQuickSightWrapper {
     }
   }
 
-  async deleteRefreshSchedule( datasetSummary: DataSetSummary ) {
+  async deleteRefreshSchedule( datasetSummary: DataSetSummary, index: number = 0) {
     const dataSetId = datasetSummary.DataSetId;
 
     try {
+      const scheduleId = dataSetId + "-schedule" + computeScheduleSuffix( index );
+      console.log(` Removing schedule ${scheduleId} to '${datasetSummary.Arn}' index ${index}.`);
+
       await this.#quicksight.send(
         new DeleteRefreshScheduleCommand({ 
           AwsAccountId: await this.#sts.getAwsAccountId(),
           DataSetId: dataSetId,
-          ScheduleId: dataSetId + "-schedule"
+          ScheduleId: scheduleId
         })
       );
 
-      console.log(` - Successfully removed schedule to '${datasetSummary.Arn}'.`);
+      console.log(` - Successfully removed schedule to '${datasetSummary.Arn}' index ${index}.`);
     } catch (error: unknown) {
       const errorName = ( error as { name?: string}).name;
       if ( errorName === "ResourceNotFoundException") {
-        console.warn(` - Schedule for '${datasetSummary.Arn}' is not present, so delete is skipped`);
+        console.warn(` - Schedule for '${datasetSummary.Arn}' index ${index} is not present, so delete is skipped`);
       }
       else {
         console.error(` ERROR: Failed to update '${datasetSummary.Arn}':`, error);
@@ -157,17 +195,4 @@ export class AwsQuickSightWrapper {
     }
   }
 
-}
-
-
-type KeyValue = { Key: string | undefined, Value: string | undefined}
-
-function fromKeyValueArrayToObject( arr: KeyValue[]) {
-  const result: { [key: string]: string | undefined } = {};
-  for( const element of arr ) {
-    if( element.Key ) {
-      result[ element.Key ] = element.Value
-    }
-  }
-  return result;
 }
