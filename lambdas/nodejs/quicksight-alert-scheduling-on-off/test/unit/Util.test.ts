@@ -8,6 +8,10 @@ import {
   intFromEnv 
 } from '../../src/Utils';
 
+// We spy on console.error to ensure it's called without polluting test logs.
+vi.spyOn(console, 'error').mockImplementation(() => {});
+vi.spyOn(console, 'log').mockImplementation(() => {});
+
 describe('fromKeyValueArrayToObject', () => {
   it('should convert a KeyValue array into a plain key-value object', () => {
     const input: KeyValue[] = [

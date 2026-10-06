@@ -4,6 +4,10 @@ import { AwsQuickSightWrapper } from '../../src/AwsQuickSightWrapper';
 
 const MOCK_SCHEDULING_DATE = new Date( "2026-01-01T00:00:00.000Z" );
 
+// We spy on console.error to ensure it's called without polluting test logs.
+vi.spyOn(console, 'error').mockImplementation(() => {});
+vi.spyOn(console, 'log').mockImplementation(() => {});
+
 vi.mock('../../src/Utils', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../src/Utils')>();
   return {
@@ -11,10 +15,6 @@ vi.mock('../../src/Utils', async (importOriginal) => {
     getRandomFutureDate: vi.fn(() => new Date( MOCK_SCHEDULING_DATE)),
   };
 });
-
-// We spy on console.error to ensure it's called without polluting test logs.
-vi.spyOn(console, 'error').mockImplementation(() => {});
-vi.spyOn(console, 'log').mockImplementation(() => {});
 
 // 1. DEFINE THE TEST SUITE
 describe('QuickSightAlertScheduler', () => {
@@ -98,10 +98,10 @@ describe('QuickSightAlertScheduler', () => {
             return 'HOURLY';
           }
           else if ( tagName === 'RefreshInterval_5') {
-            return 'WEEKLY';
+            return 'DAILY';
           }
           else if ( tagName === 'RefreshInterval_6') {
-            return 'WEEKLY';
+            return 'DAILY';
           }
 
           else {
@@ -146,7 +146,7 @@ describe('QuickSightAlertScheduler', () => {
         { refreshInterval: "HOURLY", refreshType: "INCREMENTAL_REFRESH", index: 3, whenStart: MOCK_SCHEDULING_DATE  }
       );
       expect(mockQuickSightWrapper.createRefreshSchedule).toHaveBeenCalledWith(dataSetWithTag, 
-        { refreshInterval: "WEEKLY", refreshType: "INCREMENTAL_REFRESH", index: 4, whenStart: MOCK_SCHEDULING_DATE  }
+        { refreshInterval: "DAILY", refreshType: "INCREMENTAL_REFRESH", index: 4, whenStart: MOCK_SCHEDULING_DATE  }
       );
       
       // Ensure the delete method was never touched.

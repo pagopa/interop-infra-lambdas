@@ -3,6 +3,10 @@ import { QuickSightAlertScheduler } from '../../src/QuickSightAlertScheduler';
 import { AwsQuickSightWrapper, DataSetSummaryWithTags } from '../../src/AwsQuickSightWrapper';
 import * as Utils from '../../src/Utils';
 
+// We spy on console.error to ensure it's called without polluting test logs.
+vi.spyOn(console, 'error').mockImplementation(() => {});
+vi.spyOn(console, 'log').mockImplementation(() => {});
+
 describe('QuickSightAlertScheduler - Constructor', () => {
   let mockQsWrapper: AwsQuickSightWrapper;
 
