@@ -21,6 +21,11 @@ export class QuickSightAlertScheduler {
     this.#qs = qs;
     this.#minRefreshSchduleOffset = intFromEnv("MIN_REFRESH_SCHEDULE_OFFSET_SECS") ?? 5 * 60;
     this.#maxRefreshSchduleOffset = intFromEnv("MAX_REFRESH_SCHEDULE_OFFSET_SECS") ?? 15 * 60;
+    console.log("REFRESH_TYPE_TAG_PREFIX = " + REFRESH_TYPE_TAG_PREFIX);
+    console.log("REFRESH_INTERVAL_TAG_PREFIX = " + REFRESH_INTERVAL_TAG_PREFIX);
+    console.log("MAX_REFRESH_SCHEDULER_QUANTITY = " + MAX_REFRESH_SCHEDULER_QUANTITY);
+    console.log("minRefreshSchduleOffset = " + this.#minRefreshSchduleOffset);
+    console.log("maxRefreshSchduleOffset = " + this.#maxRefreshSchduleOffset);
   }
 
   async #doForEachScheduleSupportingDataSet( 
