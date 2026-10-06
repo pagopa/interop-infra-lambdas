@@ -44,11 +44,9 @@ export class QuickSightAlertScheduler {
     console.log( "DataSet with RefreshType tag" );
     console.log( JSON.stringify( dataSetsToBeModified, null, 2 ) );
 
-    const actionsPromises = dataSetsToBeModified.map( (ds) => actionLambda(ds) )
-    for( const actionPromise of actionsPromises ) {
-      await actionPromise;
+    for( const ds of dataSetsToBeModified ) {
+      await actionLambda(ds)
     }
-    //return await Promise.all( actionsPromises )
   }
 
   #defineScheduling( dataSetWithTags: DataSetSummaryWithTags ): RefreshParameters[] {
