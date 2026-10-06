@@ -28,3 +28,30 @@ export function computeScheduleSuffix( index: number ): string {
 export async function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+export function getRandomFutureDate( minSecondsOffset: number, maxSecondsOffset: number): Date {
+  const now = Date.now();
+  const minMs = minSecondsOffset * 1000;
+  const maxMs = maxSecondsOffset * 1000;
+
+  const randomOffset = minMs + Math.random() * (maxMs - minMs);
+  return new Date(now + randomOffset);
+}
+
+export function intFromEnv( envVarName: string ): number | null {
+  const strNum = process.env[ envVarName ];
+  let result;
+  if( strNum && strNum.trim() ) {
+    result = parseInt( strNum );
+    if( Number.isNaN( result ) ) {
+      const message = `Error parsing ${envVarName} value (${strNum}) to integer`;
+      console.error( message );
+      throw new Error( message );
+    }
+  }
+  else {
+    result = null;
+  }
+  
+  return result;
+}

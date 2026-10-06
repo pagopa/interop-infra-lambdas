@@ -4,22 +4,23 @@ import {
   RefreshParameters,
   refreshParameterFactory
 } from "./AwsQuickSightWrapper";
-import { computeScheduleSuffix } from './Utils'
+import { computeScheduleSuffix, getRandomFutureDate, intFromEnv } from './Utils'
 
-const REFRESH_TYPE_TAG_PREFIX =
-  process.env.REFRESH_TYPE_TAG_PREFIX ?? "RefreshType";
-
-const REFRESH_INTERVAL_TAG_PREFIX =
-  process.env.REFRESH_INTERVAL_TAG_PREFIX ?? "RefreshInterval";
+const REFRESH_TYPE_TAG_PREFIX = process.env.REFRESH_TYPE_TAG_PREFIX ?? "RefreshType";
+const REFRESH_INTERVAL_TAG_PREFIX = process.env.REFRESH_INTERVAL_TAG_PREFIX ?? "RefreshInterval";
 
 const MAX_REFRESH_SCHEDULER_QUANTITY = 5;
 
 export class QuickSightAlertScheduler {
 
   #qs: AwsQuickSightWrapper;
+  #minRefreshSchduleOffset: number;
+  #maxRefreshSchduleOffset: number;
 
   constructor( qs: AwsQuickSightWrapper ) {
     this.#qs = qs;
+    this.#minRefreshSchduleOffset = intFromEnv("MIN_REFRESH_SCHEDULE_OFFSET_SECS") ?? 5 * 60;
+    this.#maxRefreshSchduleOffset = intFromEnv("MAX_REFRESH_SCHEDULE_OFFSET_SECS") ?? 15 * 60;
   }
 
   async #doForEachScheduleSupportingDataSet( 
@@ -53,7 +54,9 @@ export class QuickSightAlertScheduler {
       const { refreshType, refreshInterval} = this.#refreshInfoFromTags( dataSetWithTags, suffix );
       
       if( refreshType ) {
-        result.push( refreshParameterFactory( index, refreshType, refreshInterval ));
+        const scheduleParams = refreshParameterFactory( index, refreshType, refreshInterval );
+        scheduleParams.whenStart = this.#getRandomScheduleOffset();
+        result.push( scheduleParams );
       }
       else {
         if ( index == 0 ) { // - The first must be present
@@ -70,6 +73,10 @@ export class QuickSightAlertScheduler {
     const type = this.#qs.getTagValue( dataSetWithTags, REFRESH_TYPE_TAG_PREFIX + suffix );
     const interval = this.#qs.getTagValue( dataSetWithTags, REFRESH_INTERVAL_TAG_PREFIX + suffix);    
     return { refreshType: type, refreshInterval: interval };
+  }
+
+  #getRandomScheduleOffset() {
+    return getRandomFutureDate( this.#minRefreshSchduleOffset, this.#maxRefreshSchduleOffset );
   }
 
   async activateScheduling( ) {

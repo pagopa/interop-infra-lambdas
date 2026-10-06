@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fromKeyValueArrayToObject, computeScheduleSuffix, KeyValue, delay } from '../../src/Utils';
+import { 
+  fromKeyValueArrayToObject, 
+  computeScheduleSuffix, 
+  KeyValue, 
+  delay, 
+  getRandomFutureDate, 
+  intFromEnv 
+} from '../../src/Utils';
 
 describe('fromKeyValueArrayToObject', () => {
   it('should convert a KeyValue array into a plain key-value object', () => {
@@ -120,4 +127,106 @@ describe('delay', () => {
 
     expect(resolved).toBe(true);
   });
+});
+
+describe('getRandomFutureDate', () => {
+  const MOCK_NOW = 1700000000000; // Fixed timestamp in ms
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(MOCK_NOW);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('should return date with min offset when Math.random returns 0', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+
+    const minOffset = 300; // 5 minutes
+    const maxOffset = 900; // 15 minutes
+
+    const result = getRandomFutureDate(minOffset, maxOffset);
+    const expectedTime = MOCK_NOW + minOffset * 1000;
+
+    expect(result).toBeInstanceOf(Date);
+    expect(result.getTime()).toBe(expectedTime);
+  });
+
+  it('should return date with max offset when Math.random returns 1', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(1);
+
+    const minOffset = 300;
+    const maxOffset = 900;
+
+    const result = getRandomFutureDate(minOffset, maxOffset);
+    const expectedTime = MOCK_NOW + maxOffset * 1000;
+
+    expect(result.getTime()).toBe(expectedTime);
+  });
+
+  it('should return midpoint offset when Math.random returns 0.5', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.5);
+
+    const minOffset = 100;
+    const maxOffset = 200;
+
+    const result = getRandomFutureDate(minOffset, maxOffset);
+    // Offset = 100 + 0.5 * (200 - 100) = 150 seconds = 150,000 ms
+    const expectedTime = MOCK_NOW + 150000;
+
+    expect(result.getTime()).toBe(expectedTime);
+  });
+});
+
+describe('intFromEnv', () => {
+  const TEST_ENV_KEY = 'TEST_INT_VAR';
+  const originalEnvValue = process.env[TEST_ENV_KEY];
+
+  afterEach(() => {
+    if (originalEnvValue !== undefined) {
+      process.env[TEST_ENV_KEY] = originalEnvValue;
+    } else {
+      delete process.env[TEST_ENV_KEY];
+    }
+  });
+
+  it('should return parsed integer when environment variable is set', () => {
+    process.env[TEST_ENV_KEY] = '42';
+    expect(intFromEnv(TEST_ENV_KEY)).toBe(42);
+  });
+
+  it('should handle negative numeric strings in environment variable', () => {
+    process.env[TEST_ENV_KEY] = '-15';
+    expect(intFromEnv(TEST_ENV_KEY)).toBe(-15);
+  });
+
+  it('should trim strings in environment variable', () => {
+    process.env[TEST_ENV_KEY] = ' -14 ';
+    expect(intFromEnv(TEST_ENV_KEY)).toBe(-14);
+  });
+
+  it('should return null when environment variable is not defined', () => {
+    delete process.env[TEST_ENV_KEY];
+    expect(intFromEnv(TEST_ENV_KEY)).toBe( null );
+  });
+
+  it('should return null when environment variable is empty', () => {
+    process.env[TEST_ENV_KEY] = "";
+    expect(intFromEnv(TEST_ENV_KEY)).toBe( null );
+  });
+
+  it('should return null when environment variable is blank', () => {
+    process.env[TEST_ENV_KEY] = "  ";
+    expect(intFromEnv(TEST_ENV_KEY)).toBe( null );
+  });
+
+  it('should throw error when environment variable is non-numeric string', () => {
+    process.env[TEST_ENV_KEY] = 'invalid_number';
+    const expectedErrorMessage = "Error parsing TEST_INT_VAR value (invalid_number) to integer";
+    expect(() => intFromEnv(TEST_ENV_KEY)).toThrowError( expectedErrorMessage );
+  });
+
 });

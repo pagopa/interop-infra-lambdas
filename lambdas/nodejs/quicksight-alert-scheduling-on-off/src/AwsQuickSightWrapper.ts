@@ -17,7 +17,8 @@ export type DataSetSummaryWithTags = DataSetSummary & { tags:{ [key: string]: st
 export type RefreshParameters = {
   refreshType: string
   refreshInterval: string,
-  index: number
+  index: number,
+  whenStart: Date | undefined
 }
 
 export function refreshParameterFactory( 
@@ -37,7 +38,8 @@ export function refreshParameterFactory(
   return {
     refreshType: refreshType,
     refreshInterval: defaultedRefreshInterval,
-    index: index
+    index: index,
+    whenStart: undefined
   }
 }
 
@@ -149,7 +151,8 @@ export class AwsQuickSightWrapper {
           ScheduleFrequency: {
             Interval: refreshParams.refreshInterval as RefreshInterval
           },
-          RefreshType: (refreshType as IngestionType)
+          RefreshType: (refreshType as IngestionType),
+          StartAfterDateTime: refreshParams.whenStart
         }
       }
 

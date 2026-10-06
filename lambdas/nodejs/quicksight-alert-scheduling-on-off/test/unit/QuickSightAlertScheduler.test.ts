@@ -2,6 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QuickSightAlertScheduler } from '../../src/QuickSightAlertScheduler';
 import { AwsQuickSightWrapper } from '../../src/AwsQuickSightWrapper';
 
+const MOCK_SCHEDULING_DATE = new Date( "2026-01-01T00:00:00.000Z" );
+
+vi.mock('../../src/Utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/Utils')>();
+  return {
+    ...actual, // Keep other exported helpers intact
+    getRandomFutureDate: vi.fn(() => new Date( MOCK_SCHEDULING_DATE)),
+  };
+});
+
 // We spy on console.error to ensure it's called without polluting test logs.
 vi.spyOn(console, 'error').mockImplementation(() => {});
 vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -83,7 +93,7 @@ describe('QuickSightAlertScheduler', () => {
       expect(mockQuickSightWrapper.createRefreshSchedule).toHaveBeenCalledOnce();
       
       // Check that it was called with the correct dataset and the value from its tag.
-      const scheduleConfig = { refreshInterval: "HOURLY", refreshType: "FULL_REFRESH", index: 0 };
+      const scheduleConfig = { refreshInterval: "HOURLY", refreshType: "FULL_REFRESH", index: 0, whenStart: MOCK_SCHEDULING_DATE };
       expect(mockQuickSightWrapper.createRefreshSchedule).toHaveBeenCalledWith(dataSetWithTag, scheduleConfig );
       
       // Ensure the delete method was never touched.
@@ -128,7 +138,7 @@ describe('QuickSightAlertScheduler', () => {
       expect(mockQuickSightWrapper.createRefreshSchedule).toHaveBeenCalledOnce();
       
       // Check that it was called with the correct dataset and the value from its tag.
-      const scheduleConfig = { refreshInterval: "MINUTE15", refreshType: "INCREMENTAL_REFRESH", index: 0 };
+      const scheduleConfig = { refreshInterval: "MINUTE15", refreshType: "INCREMENTAL_REFRESH", index: 0, whenStart: MOCK_SCHEDULING_DATE };
       expect(mockQuickSightWrapper.createRefreshSchedule).toHaveBeenCalledWith(dataSetWithTag, scheduleConfig );
       
       // Ensure the delete method was never touched.
@@ -177,7 +187,7 @@ describe('QuickSightAlertScheduler', () => {
       expect(mockQuickSightWrapper.createRefreshSchedule).toHaveBeenCalledOnce();
       
       // Check that it was called with the correct dataset and the value from its tag.
-      const scheduleConfig = { refreshInterval: "DAILY", refreshType: "INCREMENTAL_REFRESH", index: 0 };
+      const scheduleConfig = { refreshInterval: "DAILY", refreshType: "INCREMENTAL_REFRESH", index: 0, whenStart: MOCK_SCHEDULING_DATE };
       expect(mockQuickSightWrapper.createRefreshSchedule).toHaveBeenCalledWith(dataSetWithTag, scheduleConfig );
       
       // Ensure the delete method was never touched.
