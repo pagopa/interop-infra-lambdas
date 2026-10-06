@@ -40,6 +40,14 @@ Main points:
    - `MINUTE15` is the default when `RefreshType` is `INCREMENTAL_REFRESH` and `HOURLY` is the 
      default when `RefreshType` is `FULL_REFRESH`.
    - Values `MINUTE15`, `MINUTE30` are not supported if `RefreshType` is `FULL_REFRESH`.
+   - If `RefreshType` is `FULL_REFRESH` then `RefreshInterval` can be valorized with:
+     - `WEEKLY_MONDAY`, `WEEKLY_THURSDAY`, `WEEKLY_TUESDAY`, `WEEKLY_WEDNESDAY`, `WEEKLY_FRIDAY` 
+       for refresh once a week in the specified day.
+     - `MONTHLY_<NN>` where `<NN>` is a number between 1 and 31 for refresh once a month in the
+       specified day.
+ - It is possible to define up to 5 schedule defining tags pairs `RefreshType_2`, 
+   `RefreshInterval_2` for the second schedule, `RefreshType_3`, `RefreshInterval_3` for 
+   the 3rd schedule, etc .... until `RefreshType_5`, `RefreshInterval_5`.
 
 ## Input Events
 This lambda, for each received event, look for an array field _Records_ and analyze each 
