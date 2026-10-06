@@ -274,7 +274,7 @@ describe('AwsQuickSightWrapper', () => {
       
       // ASSERT
       expect(mockQuicksightSend).toHaveBeenCalledTimes( 2 );
-      const sentCommand = mockQuicksightSend.mock.calls[0][0] as DeleteRefreshScheduleCommand;
+      const sentCommand = mockQuicksightSend.mock.calls[1][0] as DeleteRefreshScheduleCommand;
       expect(sentCommand.input.AwsAccountId).toBe(MOCK_AWS_ACCOUNT_ID);
       expect(sentCommand.input.DataSetId).toBe(spiceDataSet.DataSetId);
       expect(sentCommand.input.ScheduleId).toBe(`${spiceDataSet.DataSetId}-schedule`);
