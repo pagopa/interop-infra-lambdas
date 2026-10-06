@@ -41,13 +41,14 @@ export function getRandomFutureDate( minSecondsOffset: number, maxSecondsOffset:
 export function intFromEnv( envVarName: string ): number | null {
   const strNum = process.env[ envVarName ];
   let result;
-  if( strNum && strNum.trim() ) {
-    result = parseInt( strNum );
-    if( Number.isNaN( result ) ) {
+  if( strNum && strNum.trim() ) {  
+    const num = Number( strNum );
+    if (!Number.isInteger(num)) {
       const message = `Error parsing ${envVarName} value (${strNum}) to integer`;
       console.error( message );
       throw new Error( message );
     }
+    result = num;
   }
   else {
     result = null;
