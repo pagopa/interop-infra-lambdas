@@ -337,48 +337,48 @@ describe('AwsQuickSightWrapper', () => {
     });
   });
 
-  describe('AwsQuickSightWrapper - hasTagsByPrefix', () => {
-  // Stub StsWrapper as hasTagsByPrefix does not make network or STS calls
-  const mockSts = {} as AwsStsWrapper;
-  const wrapper = new AwsQuickSightWrapper(mockSts);
+  describe('AwsQuickSightWrapper - hasTagsByRegexp', () => {
+    // Stub StsWrapper as hasTagsByPrefix does not make network or STS calls
+    const mockSts = {} as AwsStsWrapper;
+    const wrapper = new AwsQuickSightWrapper(mockSts);
 
-  const baseDataSet: DataSetSummaryWithTags = {
-    Arn: 'arn:aws:quicksight:us-east-1:123456789012:dataset/test-dataset',
-    DataSetId: 'test-dataset',
-    Name: 'Test Dataset',
-    tags: {
-      'schedule:type': 'INCREMENTAL',
-      'schedule:interval': 'HOURLY',
-      'owner': 'analytics-team',
-      'unsetProperty': undefined,
-      'emptyProperty': '',
-    },
-  };
-
-  it('should return true when at least one tag key starts with the prefix and has a valid value', () => {
-    expect(wrapper.hasTagsByPrefix(baseDataSet, 'schedule:')).toBe(true);
-  });
-
-  it('should return true when matching an exact full key with a valid value', () => {
-    expect(wrapper.hasTagsByPrefix(baseDataSet, 'owner')).toBe(true);
-  });
-
-  it('should return false when no tag keys match the prefix', () => {
-    expect(wrapper.hasTagsByPrefix(baseDataSet, 'billing:')).toBe(false);
-  });
-
-  it('should return false when the prefix matches a key whose value is undefined or an empty string', () => {
-    expect(wrapper.hasTagsByPrefix(baseDataSet, 'unsetProperty')).toBe(false);
-    expect(wrapper.hasTagsByPrefix(baseDataSet, 'emptyProperty')).toBe(false);
-  });
-
-  it('should return false when dataset tags are empty', () => {
-    const emptyDataSet: DataSetSummaryWithTags = {
-      ...baseDataSet,
-      tags: {},
+    const baseDataSet: DataSetSummaryWithTags = {
+      Arn: 'arn:aws:quicksight:us-east-1:123456789012:dataset/test-dataset',
+      DataSetId: 'test-dataset',
+      Name: 'Test Dataset',
+      tags: {
+        'schedule:type': 'INCREMENTAL',
+        'schedule:interval': 'HOURLY',
+        'owner': 'analytics-team',
+        'unsetProperty': undefined,
+        'emptyProperty': '',
+      },
     };
-    expect(wrapper.hasTagsByPrefix(emptyDataSet, 'schedule:')).toBe(false);
+
+    it('should return true when at least one tag key starts with the prefix and has a valid value', () => {
+      expect(wrapper.hasTagsByRegexp(baseDataSet, 'schedule:.*')).toBe(true);
+    });
+
+    it('should return true when matching an exact full key with a valid value', () => {
+      expect(wrapper.hasTagsByRegexp(baseDataSet, 'owner')).toBe(true);
+    });
+
+    it('should return false when no tag keys match the prefix', () => {
+      expect(wrapper.hasTagsByRegexp(baseDataSet, 'billing:.*')).toBe(false);
+    });
+
+    it('should return false when the prefix matches a key whose value is undefined or an empty string', () => {
+      expect(wrapper.hasTagsByRegexp(baseDataSet, 'unsetProperty')).toBe(false);
+      expect(wrapper.hasTagsByRegexp(baseDataSet, 'emptyProperty')).toBe(false);
+    });
+
+    it('should return false when dataset tags are empty', () => {
+      const emptyDataSet: DataSetSummaryWithTags = {
+        ...baseDataSet,
+        tags: {},
+      };
+      expect(wrapper.hasTagsByRegexp(emptyDataSet, 'schedule:.*')).toBe(false);
+    });
   });
-});
 
 });

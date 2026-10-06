@@ -121,10 +121,12 @@ export class AwsQuickSightWrapper {
     return dataSetWithTag.tags[ tagName ];
   }
 
-  hasTagsByPrefix( dataSetWithTag: DataSetSummaryWithTags, tagPrefix: string ): boolean {
+  hasTagsByRegexp( dataSetWithTag: DataSetSummaryWithTags, tagRegexp: string ): boolean {
+    const regex = new RegExp( tagRegexp );
     let result: boolean = false;
+    
     for (const [key, value] of Object.entries( dataSetWithTag.tags )) {
-      if( value && key.startsWith( tagPrefix )) {
+      if( value && regex.test( key )) {
         result = true;
       }
     }

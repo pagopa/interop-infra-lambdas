@@ -45,7 +45,7 @@ describe('QuickSightAlertScheduler', () => {
     mockQuickSightWrapper = {
       listScheduleSupportingDataSets: vi.fn(),
       getTagValue: vi.fn(),
-      hasTagsByPrefix: vi.fn(),
+      hasTagsByRegexp: vi.fn(),
       createRefreshSchedule: vi.fn(),
       deleteRefreshSchedule: vi.fn(),
     } as unknown as AwsQuickSightWrapper;
@@ -72,12 +72,12 @@ describe('QuickSightAlertScheduler', () => {
         return undefined;
       });
 
-      // 2.b. Simulate the hasTagsByPrefix behavior to drive the filtering logic.
-      vi.mocked(mockQuickSightWrapper.hasTagsByPrefix).mockImplementation((dataset, tagName) => {
+      // 2.b. Simulate the hasTagsByRegexp behavior to drive the filtering logic.
+      vi.mocked(mockQuickSightWrapper.hasTagsByRegexp).mockImplementation((dataset, tagName) => {
         // Return the tag value if it's the one we're looking for.
         const result = (
           dataset.DataSetId === dataSetWithTag.DataSetId 
-          && tagName === 'RefreshType'
+          && tagName === 'RefreshType(_[2-5])?'
         );
         return result;
       });
@@ -117,12 +117,12 @@ describe('QuickSightAlertScheduler', () => {
         // Return undefined for the dataset without the tag.
         return undefined;
       });
-      // 2.b. Simulate the hasTagsByPrefix behavior to drive the filtering logic.
-      vi.mocked(mockQuickSightWrapper.hasTagsByPrefix).mockImplementation((dataset, tagName) => {
+      // 2.b. Simulate the hasTagsByRegexp behavior to drive the filtering logic.
+      vi.mocked(mockQuickSightWrapper.hasTagsByRegexp).mockImplementation((dataset, tagName) => {
         // Return the tag value if it's the one we're looking for.
         const result = (
           dataset.DataSetId === dataSetWithTag.DataSetId 
-          && tagName === 'RefreshType'
+          && tagName === 'RefreshType(_[2-5])?'
         );
         return result;
       });
@@ -165,12 +165,12 @@ describe('QuickSightAlertScheduler', () => {
         // Return undefined for the dataset without the tag.
         return undefined;
       });
-      // 2.b. Simulate the hasTagsByPrefix behavior to drive the filtering logic.
-      vi.mocked(mockQuickSightWrapper.hasTagsByPrefix).mockImplementation((dataset, tagName) => {
+      // 2.b. Simulate the hasTagsByRegexp behavior to drive the filtering logic.
+      vi.mocked(mockQuickSightWrapper.hasTagsByRegexp).mockImplementation((dataset, tagName) => {
         // Return the tag value if it's the one we're looking for.
         const result = (
           dataset.DataSetId === dataSetWithTag.DataSetId 
-          && tagName === 'RefreshType'
+          && tagName === 'RefreshType(_[2-5])?'
         );
         return result;
       });
@@ -228,11 +228,11 @@ describe('QuickSightAlertScheduler', () => {
         }
         return undefined;
       });
-      vi.mocked(mockQuickSightWrapper.hasTagsByPrefix).mockImplementation((dataset, tagName) => {
+      vi.mocked(mockQuickSightWrapper.hasTagsByRegexp).mockImplementation((dataset, tagName) => {
         // Return the tag value if it's the one we're looking for.
         const result = (
           dataset.DataSetId === dataSetWithTag.DataSetId 
-          && tagName === 'RefreshType'
+          && tagName === 'RefreshType(_[2-5])?'
         );
         return result;
       });

@@ -20,7 +20,7 @@ describe('QuickSightAlertScheduler - Constructor', () => {
     // Mock the QuickSight wrapper instance methods
     mockQsWrapper = {
       listScheduleSupportingDataSets: vi.fn().mockResolvedValue([mockDataSet]),
-      hasTagsByPrefix: vi.fn().mockReturnValue(true),
+      hasTagsByRegexp: vi.fn().mockReturnValue(true),
       getTagValue: vi.fn((ds, tagKey) => (tagKey === 'RefreshType' ? 'FULL_REFRESH' : undefined)),
       createRefreshSchedule: vi.fn().mockResolvedValue(undefined),
       deleteRefreshSchedule: vi.fn().mockResolvedValue(undefined),

@@ -35,7 +35,7 @@ describe('QuickSightAlertScheduler', () => {
     mockQuickSightWrapper = {
       listScheduleSupportingDataSets: vi.fn(),
       getTagValue: vi.fn(),
-      hasTagsByPrefix: vi.fn(),
+      hasTagsByRegexp: vi.fn(),
       createRefreshSchedule: vi.fn(),
       deleteRefreshSchedule: vi.fn(),
     } as unknown as AwsQuickSightWrapper;
@@ -54,11 +54,11 @@ describe('QuickSightAlertScheduler', () => {
       vi.mocked(mockQuickSightWrapper.getTagValue).mockImplementation((dataset, tagName) => {
         return undefined;
       });
-      vi.mocked(mockQuickSightWrapper.hasTagsByPrefix).mockImplementation((dataset, tagName) => {
+      vi.mocked(mockQuickSightWrapper.hasTagsByRegexp).mockImplementation((dataset, tagName) => {
         // Return the tag value if it's the one we're looking for.
         const result = (
           dataset.DataSetId === dataSetWithTag.DataSetId 
-          && tagName === 'RefreshType'
+          && tagName === 'RefreshType(_[2-5])?'
         );
         return result;
       });

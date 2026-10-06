@@ -37,7 +37,7 @@ export class QuickSightAlertScheduler {
     console.log( JSON.stringify( dataSetsWithTags, null, 2 ) );
 
     const dataSetsToBeModified = dataSetsWithTags.filter(
-      (dataSetsWithTags) => this.#qs.hasTagsByPrefix( dataSetsWithTags, REFRESH_TYPE_TAG_PREFIX )
+      (dataSetsWithTags) => this.#qs.hasTagsByRegexp( dataSetsWithTags, REFRESH_TYPE_TAG_PREFIX + "(_[2-5])?" )
     )
 
     console.log( "DataSet with RefreshType tag" );
