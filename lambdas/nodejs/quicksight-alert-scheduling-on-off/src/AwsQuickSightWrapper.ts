@@ -8,7 +8,9 @@ import {
     DeleteRefreshScheduleCommand, 
     CreateRefreshScheduleRequest,
     RefreshInterval,
-    DescribeRefreshScheduleCommand
+    DescribeRefreshScheduleCommand,
+    RefreshFrequency,
+    DayOfWeek
 } from "@aws-sdk/client-quicksight";
 import { AwsStsWrapper } from "./AwsStsWrapper";
 import { computeScheduleSuffix, fromKeyValueArrayToObject, delay } from './Utils'
@@ -143,14 +145,14 @@ export class AwsQuickSightWrapper {
     const scheduleId = dataSetId + "-schedule" + computeScheduleSuffix( index );
 
     try {
+      const scheduleFrequency = this.#parseScheduleFrequency( refreshParams.refreshInterval );
+
       const scheduleConfig : CreateRefreshScheduleRequest = { 
         AwsAccountId: await this.#sts.getAwsAccountId(),
         DataSetId: dataSetId,
         Schedule: {
           ScheduleId: scheduleId,
-          ScheduleFrequency: {
-            Interval: refreshParams.refreshInterval as RefreshInterval
-          },
+          ScheduleFrequency: scheduleFrequency,
           RefreshType: (refreshType as IngestionType),
           StartAfterDateTime: refreshParams.whenStart
         }
@@ -171,6 +173,34 @@ export class AwsQuickSightWrapper {
         throw error;
       }
     }
+  }
+
+  #parseScheduleFrequency( refreshInterval: string): RefreshFrequency {
+    const WEEKLY_PREFIX = "WEEKLY_";
+    const MONTHLY_PREFIX = "MONTHLY_";
+
+    let result: RefreshFrequency;
+
+    if ( refreshInterval.startsWith( WEEKLY_PREFIX )) {
+      result = {
+        Interval: "WEEKLY",
+        RefreshOnDay: {
+          DayOfWeek: refreshInterval.substring( WEEKLY_PREFIX.length ) as DayOfWeek
+        }
+      }
+    }
+    else if ( refreshInterval.startsWith( MONTHLY_PREFIX )) {
+      result = {
+        Interval: "MONTHLY",
+        RefreshOnDay: {
+          DayOfMonth: refreshInterval.substring( MONTHLY_PREFIX.length )
+        }
+      }
+    }
+    else {
+      result = { Interval: refreshInterval as RefreshInterval };
+    }
+    return result;
   }
 
   async deleteRefreshSchedule( datasetSummary: DataSetSummary, index: number = 0) {

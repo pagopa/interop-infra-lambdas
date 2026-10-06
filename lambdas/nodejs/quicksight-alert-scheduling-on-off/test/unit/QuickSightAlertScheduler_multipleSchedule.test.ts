@@ -98,7 +98,7 @@ describe('QuickSightAlertScheduler', () => {
             return 'HOURLY';
           }
           else if ( tagName === 'RefreshInterval_5') {
-            return 'DAILY';
+            return 'WEEKLY_SUNDAY';
           }
           else if ( tagName === 'RefreshInterval_6') {
             return 'DAILY';
@@ -146,7 +146,7 @@ describe('QuickSightAlertScheduler', () => {
         { refreshInterval: "HOURLY", refreshType: "INCREMENTAL_REFRESH", index: 3, whenStart: MOCK_SCHEDULING_DATE  }
       );
       expect(mockQuickSightWrapper.createRefreshSchedule).toHaveBeenCalledWith(dataSetWithTag, 
-        { refreshInterval: "DAILY", refreshType: "INCREMENTAL_REFRESH", index: 4, whenStart: MOCK_SCHEDULING_DATE  }
+        { refreshInterval: "WEEKLY_SUNDAY", refreshType: "INCREMENTAL_REFRESH", index: 4, whenStart: MOCK_SCHEDULING_DATE  }
       );
       
       // Ensure the delete method was never touched.

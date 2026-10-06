@@ -249,8 +249,44 @@ describe('AwsQuickSightWrapper', () => {
       const wrapper = new AwsQuickSightWrapper(mockStsWrapper);
 
       // ACT & ASSERT
-      const scheduleConfig = { refreshType: 'INCREMENTAL_REFRESH', refreshInterval: 'HOURLY' }
+      const scheduleConfig = { refreshType: 'INCREMENTAL_REFRESH', refreshInterval: 'HOURLY', index: 0, whenStart: undefined }
       await expect( async () => await wrapper.createRefreshSchedule(spiceDataSet, scheduleConfig)).rejects.toThrow("Send fail");
+    });
+
+    it('should support dayOfWeek for WEEKLY schedule', async () => {
+      // ARRANGE: Mock the AWS SDK to throw the specific "already exists" error.
+      mockQuicksightSend.mockResolvedValueOnce({});
+      const wrapper = new AwsQuickSightWrapper(mockStsWrapper);
+
+      // ACT 
+      const scheduleConfig = { refreshType: 'FULL_REFRESH', refreshInterval: 'WEEKLY_MONDAY', index: 0, whenStart: undefined }
+      await wrapper.createRefreshSchedule(spiceDataSet, scheduleConfig )
+      
+      // ASSERT: The method should resolve successfully.
+      expect( mockQuicksightSend ).toHaveBeenCalledOnce()
+
+      const sentCommand = mockQuicksightSend.mock.calls[0][0] as CreateRefreshScheduleCommand;
+      expect( sentCommand.input.Schedule?.RefreshType ).toBe('FULL_REFRESH')
+      expect( sentCommand.input.Schedule?.ScheduleFrequency?.Interval ).toBe('WEEKLY')
+      expect( sentCommand.input.Schedule?.ScheduleFrequency?.RefreshOnDay?.DayOfWeek ).toBe('MONDAY')
+    });
+
+    it('should support dayOfMonth for MONTHLY schedule', async () => {
+      // ARRANGE: Mock the AWS SDK to throw the specific "already exists" error.
+      mockQuicksightSend.mockResolvedValueOnce({});
+      const wrapper = new AwsQuickSightWrapper(mockStsWrapper);
+
+      // ACT 
+      const scheduleConfig = { refreshType: 'FULL_REFRESH', refreshInterval: 'MONTHLY_10', index: 0, whenStart: undefined }
+      await wrapper.createRefreshSchedule(spiceDataSet, scheduleConfig )
+      
+      // ASSERT: The method should resolve successfully.
+      expect( mockQuicksightSend ).toHaveBeenCalledOnce()
+
+      const sentCommand = mockQuicksightSend.mock.calls[0][0] as CreateRefreshScheduleCommand;
+      expect( sentCommand.input.Schedule?.RefreshType ).toBe('FULL_REFRESH')
+      expect( sentCommand.input.Schedule?.ScheduleFrequency?.Interval ).toBe('MONTHLY')
+      expect( sentCommand.input.Schedule?.ScheduleFrequency?.RefreshOnDay?.DayOfMonth ).toBe('10')
     });
   });
 
