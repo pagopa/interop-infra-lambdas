@@ -43,7 +43,7 @@ Main points:
    - If `RefreshType` is `FULL_REFRESH` then `RefreshInterval` can be valorized with:
      - `WEEKLY_MONDAY`, `WEEKLY_THURSDAY`, `WEEKLY_TUESDAY`, `WEEKLY_WEDNESDAY`, `WEEKLY_FRIDAY` 
        for refresh once a week in the specified day.
-     - `WEEKLY_SUNDAY` and `WEEKLY_SATURDAY` are supported by discouraged because analytics is
+     - `WEEKLY_SUNDAY` and `WEEKLY_SATURDAY` are supported but discouraged because analytics is
        stopped for cost-saving reason.
      - `MONTHLY_<NN>` where `<NN>` is a number between 1 and 31 for refresh once a month in the
        specified day.
