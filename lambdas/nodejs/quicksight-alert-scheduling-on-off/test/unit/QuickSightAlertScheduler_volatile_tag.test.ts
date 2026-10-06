@@ -58,7 +58,7 @@ describe('QuickSightAlertScheduler', () => {
         // Return the tag value if it's the one we're looking for.
         const result = (
           dataset.DataSetId === dataSetWithTag.DataSetId 
-          && tagName === 'RefreshType(_[2-5])?'
+          && tagName === '^RefreshType(_[2-5])?$'
         );
         return result;
       });

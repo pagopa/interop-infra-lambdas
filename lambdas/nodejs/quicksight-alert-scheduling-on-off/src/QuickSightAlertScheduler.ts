@@ -9,6 +9,7 @@ import { computeScheduleSuffix, getRandomFutureDate, intFromEnv } from './Utils'
 const REFRESH_TYPE_TAG_PREFIX = process.env.REFRESH_TYPE_TAG_PREFIX ?? "RefreshType";
 const REFRESH_INTERVAL_TAG_PREFIX = process.env.REFRESH_INTERVAL_TAG_PREFIX ?? "RefreshInterval";
 
+const REFRESH_TYPE_TAG_REGEXP = "^" + REFRESH_TYPE_TAG_PREFIX + "(_[2-5])?$"
 const MAX_REFRESH_SCHEDULER_QUANTITY = 5;
 
 export class QuickSightAlertScheduler {
@@ -37,7 +38,7 @@ export class QuickSightAlertScheduler {
     console.log( JSON.stringify( dataSetsWithTags, null, 2 ) );
 
     const dataSetsToBeModified = dataSetsWithTags.filter(
-      (dataSetsWithTags) => this.#qs.hasTagsByRegexp( dataSetsWithTags, REFRESH_TYPE_TAG_PREFIX + "(_[2-5])?" )
+      (dataSetsWithTags) => this.#qs.hasTagsByRegexp( dataSetsWithTags, REFRESH_TYPE_TAG_REGEXP )
     )
 
     console.log( "DataSet with RefreshType tag" );
