@@ -35,6 +35,7 @@ describe('QuickSightAlertScheduler', () => {
     mockQuickSightWrapper = {
       listScheduleSupportingDataSets: vi.fn(),
       getTagValue: vi.fn(),
+      hasTagsByRegexp: vi.fn(),
       createRefreshSchedule: vi.fn(),
       deleteRefreshSchedule: vi.fn(),
     } as unknown as AwsQuickSightWrapper;
@@ -51,11 +52,15 @@ describe('QuickSightAlertScheduler', () => {
 
       let numTagValueCalls = 0;
       vi.mocked(mockQuickSightWrapper.getTagValue).mockImplementation((dataset, tagName) => {
-        if (dataset.DataSetId === dataSetWithTag.DataSetId && tagName === 'RefreshType' && numTagValueCalls == 0) {
-          numTagValueCalls += 1;
-          return 'FULL_REFRESH'; // The value doesn't matter here, just its existence.
-        }
         return undefined;
+      });
+      vi.mocked(mockQuickSightWrapper.hasTagsByRegexp).mockImplementation((dataset, tagName) => {
+        // Return the tag value if it's the one we're looking for.
+        const result = (
+          dataset.DataSetId === dataSetWithTag.DataSetId 
+          && tagName === '^RefreshType(_[2-5])?$'
+        );
+        return result;
       });
 
       const scheduler = new QuickSightAlertScheduler(mockQuickSightWrapper);

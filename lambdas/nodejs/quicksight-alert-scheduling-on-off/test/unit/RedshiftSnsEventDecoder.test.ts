@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { RedshiftSnsEventDecoder } from '../../src/RedshiftSnsEventDecoder';
 
+// We spy on console.error to ensure it's called without polluting test logs.
+vi.spyOn(console, 'error').mockImplementation(() => {});
+vi.spyOn(console, 'log').mockImplementation(() => {});
+
 // Helper function to create a mock SNS Record for our tests
 const createMockSnsRecord = (message: object, subject: string | null) => ({
   Sns: {

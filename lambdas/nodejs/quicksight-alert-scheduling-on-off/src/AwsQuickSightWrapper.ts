@@ -7,14 +7,42 @@ import {
     IngestionType, 
     DeleteRefreshScheduleCommand, 
     CreateRefreshScheduleRequest,
-    RefreshInterval
+    RefreshInterval,
+    DescribeRefreshScheduleCommand,
+    RefreshFrequency,
+    DayOfWeek
 } from "@aws-sdk/client-quicksight";
 import { AwsStsWrapper } from "./AwsStsWrapper";
+import { computeScheduleSuffix, fromKeyValueArrayToObject, delay } from './Utils'
 
 export type DataSetSummaryWithTags = DataSetSummary & { tags:{ [key: string]: string | undefined }}
 export type RefreshParameters = {
   refreshType: string
-  refreshInterval: string
+  refreshInterval: string,
+  index: number,
+  whenStart: Date | undefined
+}
+
+export function refreshParameterFactory( 
+  index: number, 
+  refreshType: string, 
+  refreshInterval: string | undefined
+): RefreshParameters {
+  
+  let defaultedRefreshInterval;
+  if( refreshInterval ) {
+    defaultedRefreshInterval = refreshInterval;
+  }
+  else {
+    defaultedRefreshInterval = (refreshType == "INCREMENTAL_REFRESH" ? "MINUTE15" : "HOURLY");
+  }
+      
+  return {
+    refreshType: refreshType,
+    refreshInterval: defaultedRefreshInterval,
+    index: index,
+    whenStart: undefined
+  }
 }
 
 export class AwsQuickSightWrapper {
@@ -93,8 +121,21 @@ export class AwsQuickSightWrapper {
     return dataSetWithTag.tags[ tagName ];
   }
 
+  hasTagsByRegexp( dataSetWithTag: DataSetSummaryWithTags, tagRegexp: string ): boolean {
+    const regex = new RegExp( tagRegexp );
+    let result: boolean = false;
+    
+    for (const [key, value] of Object.entries( dataSetWithTag.tags )) {
+      if( value && regex.test( key )) {
+        result = true;
+      }
+    }
+    return result;
+  }
+
   async createRefreshSchedule( datasetSummary: DataSetSummary, refreshParams: RefreshParameters ) {
     const dataSetId = datasetSummary.DataSetId;
+    const index = refreshParams.index || 0;
 
     const refreshType = refreshParams.refreshType;
     if( ![ "INCREMENTAL_REFRESH", "FULL_REFRESH"].includes( refreshType )) {
@@ -103,19 +144,23 @@ export class AwsQuickSightWrapper {
       throw new Error( msg );
     }
 
+    const scheduleId = dataSetId + "-schedule" + computeScheduleSuffix( index );
+
     try {
+      const scheduleFrequency = this.#parseScheduleFrequency( refreshParams.refreshInterval );
+
       const scheduleConfig : CreateRefreshScheduleRequest = { 
         AwsAccountId: await this.#sts.getAwsAccountId(),
         DataSetId: dataSetId,
         Schedule: {
-          ScheduleId: dataSetId + "-schedule",
-          ScheduleFrequency: {
-            Interval: refreshParams.refreshInterval as RefreshInterval
-          },
-          RefreshType: (refreshType as IngestionType)
+          ScheduleId: scheduleId,
+          ScheduleFrequency: scheduleFrequency,
+          RefreshType: (refreshType as IngestionType),
+          StartAfterDateTime: refreshParams.whenStart
         }
       }
 
+      await delay(100);
       await this.#quicksight.send( new CreateRefreshScheduleCommand( scheduleConfig ) );
 
       console.log(` - Successfully applied schedule to '${datasetSummary.Arn}'. Schedule data:\n`, scheduleConfig );
@@ -132,23 +177,58 @@ export class AwsQuickSightWrapper {
     }
   }
 
-  async deleteRefreshSchedule( datasetSummary: DataSetSummary ) {
+  #parseScheduleFrequency( refreshInterval: string): RefreshFrequency {
+    const WEEKLY_PREFIX = "WEEKLY_";
+    const MONTHLY_PREFIX = "MONTHLY_";
+
+    let result: RefreshFrequency;
+
+    if ( refreshInterval.startsWith( WEEKLY_PREFIX )) {
+      result = {
+        Interval: "WEEKLY",
+        RefreshOnDay: {
+          DayOfWeek: refreshInterval.substring( WEEKLY_PREFIX.length ) as DayOfWeek
+        }
+      }
+    }
+    else if ( refreshInterval.startsWith( MONTHLY_PREFIX )) {
+      result = {
+        Interval: "MONTHLY",
+        RefreshOnDay: {
+          DayOfMonth: refreshInterval.substring( MONTHLY_PREFIX.length )
+        }
+      }
+    }
+    else {
+      result = { Interval: refreshInterval as RefreshInterval };
+    }
+    return result;
+  }
+
+  async deleteRefreshSchedule( datasetSummary: DataSetSummary, index: number = 0) {
     const dataSetId = datasetSummary.DataSetId;
 
     try {
-      await this.#quicksight.send(
-        new DeleteRefreshScheduleCommand({ 
-          AwsAccountId: await this.#sts.getAwsAccountId(),
-          DataSetId: dataSetId,
-          ScheduleId: dataSetId + "-schedule"
-        })
-      );
+      const scheduleId = dataSetId + "-schedule" + computeScheduleSuffix( index );
+      console.log(` Removing schedule ${scheduleId} to '${datasetSummary.Arn}' index ${index}.`);
 
-      console.log(` - Successfully removed schedule to '${datasetSummary.Arn}'.`);
+      const params = { 
+        AwsAccountId: await this.#sts.getAwsAccountId(),
+        DataSetId: dataSetId,
+        ScheduleId: scheduleId
+      };
+      
+      const scheduleExsist = await this.#hasSpecificSchedule( params );
+      await delay( 100 );
+      if( scheduleExsist ) {
+        await this.#quicksight.send( new DeleteRefreshScheduleCommand( params ));
+      }
+
+      console.log(` - Successfully removed schedule to '${datasetSummary.Arn}' index ${index}.`);
     } catch (error: unknown) {
       const errorName = ( error as { name?: string}).name;
       if ( errorName === "ResourceNotFoundException") {
-        console.warn(` - Schedule for '${datasetSummary.Arn}' is not present, so delete is skipped`);
+        console.warn(` - Schedule for '${datasetSummary.Arn}' index ${index} is not present, so delete is skipped`);
       }
       else {
         console.error(` ERROR: Failed to update '${datasetSummary.Arn}':`, error);
@@ -157,17 +237,23 @@ export class AwsQuickSightWrapper {
     }
   }
 
-}
-
-
-type KeyValue = { Key: string | undefined, Value: string | undefined}
-
-function fromKeyValueArrayToObject( arr: KeyValue[]) {
-  const result: { [key: string]: string | undefined } = {};
-  for( const element of arr ) {
-    if( element.Key ) {
-      result[ element.Key ] = element.Value
+  async #hasSpecificSchedule( params: {
+    AwsAccountId: string, 
+    DataSetId: string | undefined, 
+    ScheduleId: string
+  }): Promise<boolean> {
+    try {
+      await this.#quicksight.send(
+        new DescribeRefreshScheduleCommand( params )
+      );
+      return true; // Schedule exists
+    } catch (error: unknown) {
+      const errorName = (error as { name?: string }).name;
+      if (errorName === "ResourceNotFoundException") {
+        return false; // Schedule does not exist
+      }
+      throw error; // Re-throw unhandled errors (e.g., ThrottlingException, AccessDenied)
     }
   }
-  return result;
+
 }

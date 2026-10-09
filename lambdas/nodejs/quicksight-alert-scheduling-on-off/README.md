@@ -40,6 +40,16 @@ Main points:
    - `MINUTE15` is the default when `RefreshType` is `INCREMENTAL_REFRESH` and `HOURLY` is the 
      default when `RefreshType` is `FULL_REFRESH`.
    - Values `MINUTE15`, `MINUTE30` are not supported if `RefreshType` is `FULL_REFRESH`.
+   - If `RefreshType` is `FULL_REFRESH` then `RefreshInterval` can be valorized with:
+     - `WEEKLY_MONDAY`, `WEEKLY_THURSDAY`, `WEEKLY_TUESDAY`, `WEEKLY_WEDNESDAY`, `WEEKLY_FRIDAY` 
+       for refresh once a week in the specified day.
+     - `WEEKLY_SUNDAY` and `WEEKLY_SATURDAY` are supported but discouraged because analytics is
+       stopped for cost-saving reason.
+     - `MONTHLY_<NN>` where `<NN>` is a number between 1 and 28 for refresh once a month in the
+       specified day.
+ - It is possible to define up to 5 schedule defining tags pairs `RefreshType_2`, 
+   `RefreshInterval_2` for the second schedule, `RefreshType_3`, `RefreshInterval_3` for 
+   the 3rd schedule, etc .... until `RefreshType_5`, `RefreshInterval_5`.
 
 ## Input Events
 This lambda, for each received event, look for an array field _Records_ and analyze each 
@@ -54,3 +64,12 @@ element looking for a redshift event wrapped in an SNS message ([Raw delivery](h
 Example of events are kept in this repository:
  - __REDSHIFT-EVENT-3622__ (_ON_) [redshift_resume_event.json](./example_redshift_events/redshift_resume_event.json)
  - __REDSHIFT-EVENT-3618__ (_OFF_) [redshift_pause_event.json](./example_redshift_events/redshift_pause_event.json)
+
+## Environment Variables
+- `REFRESH_TYPE_TAG_PREFIX` (`RefreshType` by default) and `REFRESH_INTERVAL_TAG_PREFIX` 
+  (`RefreshInterval` by default) are the two environment variables who define the names 
+  of the QuickSight DataSet tags who contains the schedule informations.
+- `MIN_REFRESH_SCHEDULE_OFFSET_SECS` and `MAX_REFRESH_SCHEDULE_OFFSET_SECS` define a time
+  range from lambda execution time that will be used as scheduling start time. This is usefull
+  to avoid refresh congestion and avoid daily schedule to be ignored by quicksight.
+  Defaults are 300 and 900 seconds (5 - 15 minutes).

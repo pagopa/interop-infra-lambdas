@@ -7,6 +7,7 @@ import {
   ListTagsForResourceCommand,
   CreateRefreshScheduleCommand,
   DeleteRefreshScheduleCommand,
+  DescribeRefreshScheduleCommand,
 } from '@aws-sdk/client-quicksight';
 
 // We spy on console.error to ensure it's called without polluting test logs.
@@ -31,6 +32,7 @@ vi.mock('@aws-sdk/client-quicksight', async (importOriginal) => {
     ListTagsForResourceCommand: original.ListTagsForResourceCommand,
     CreateRefreshScheduleCommand: original.CreateRefreshScheduleCommand,
     DeleteRefreshScheduleCommand: original.DeleteRefreshScheduleCommand,
+    DescribeRefreshScheduleCommand: original.DescribeRefreshScheduleCommand,
   };
 });
 
@@ -247,8 +249,44 @@ describe('AwsQuickSightWrapper', () => {
       const wrapper = new AwsQuickSightWrapper(mockStsWrapper);
 
       // ACT & ASSERT
-      const scheduleConfig = { refreshType: 'INCREMENTAL_REFRESH', refreshInterval: 'HOURLY' }
+      const scheduleConfig = { refreshType: 'INCREMENTAL_REFRESH', refreshInterval: 'HOURLY', index: 0, whenStart: undefined }
       await expect( async () => await wrapper.createRefreshSchedule(spiceDataSet, scheduleConfig)).rejects.toThrow("Send fail");
+    });
+
+    it('should support dayOfWeek for WEEKLY schedule', async () => {
+      // ARRANGE: Mock the AWS SDK to throw the specific "already exists" error.
+      mockQuicksightSend.mockResolvedValueOnce({});
+      const wrapper = new AwsQuickSightWrapper(mockStsWrapper);
+
+      // ACT 
+      const scheduleConfig = { refreshType: 'FULL_REFRESH', refreshInterval: 'WEEKLY_MONDAY', index: 0, whenStart: undefined }
+      await wrapper.createRefreshSchedule(spiceDataSet, scheduleConfig )
+      
+      // ASSERT: The method should resolve successfully.
+      expect( mockQuicksightSend ).toHaveBeenCalledOnce()
+
+      const sentCommand = mockQuicksightSend.mock.calls[0][0] as CreateRefreshScheduleCommand;
+      expect( sentCommand.input.Schedule?.RefreshType ).toBe('FULL_REFRESH')
+      expect( sentCommand.input.Schedule?.ScheduleFrequency?.Interval ).toBe('WEEKLY')
+      expect( sentCommand.input.Schedule?.ScheduleFrequency?.RefreshOnDay?.DayOfWeek ).toBe('MONDAY')
+    });
+
+    it('should support dayOfMonth for MONTHLY schedule', async () => {
+      // ARRANGE: Mock the AWS SDK to throw the specific "already exists" error.
+      mockQuicksightSend.mockResolvedValueOnce({});
+      const wrapper = new AwsQuickSightWrapper(mockStsWrapper);
+
+      // ACT 
+      const scheduleConfig = { refreshType: 'FULL_REFRESH', refreshInterval: 'MONTHLY_10', index: 0, whenStart: undefined }
+      await wrapper.createRefreshSchedule(spiceDataSet, scheduleConfig )
+      
+      // ASSERT: The method should resolve successfully.
+      expect( mockQuicksightSend ).toHaveBeenCalledOnce()
+
+      const sentCommand = mockQuicksightSend.mock.calls[0][0] as CreateRefreshScheduleCommand;
+      expect( sentCommand.input.Schedule?.RefreshType ).toBe('FULL_REFRESH')
+      expect( sentCommand.input.Schedule?.ScheduleFrequency?.Interval ).toBe('MONTHLY')
+      expect( sentCommand.input.Schedule?.ScheduleFrequency?.RefreshOnDay?.DayOfMonth ).toBe('10')
     });
   });
 
@@ -257,14 +295,22 @@ describe('AwsQuickSightWrapper', () => {
   describe('deleteRefreshSchedule', () => {
     it('should call the send command with the correct parameters', async () => {
       const wrapper = new AwsQuickSightWrapper(mockStsWrapper);
-      mockQuicksightSend.mockResolvedValue({})
+      //mockQuicksightSend.mockResolvedValue({})
+      mockQuicksightSend.mockImplementation(async (command) => {
+        if (command instanceof DescribeRefreshScheduleCommand) {
+          return {  };
+        }
+        if (command instanceof DeleteRefreshScheduleCommand) {
+          return {  };
+        }
+      });
       
       // ACT
       await wrapper.deleteRefreshSchedule(spiceDataSet);
       
       // ASSERT
-      expect(mockQuicksightSend).toHaveBeenCalledOnce();
-      const sentCommand = mockQuicksightSend.mock.calls[0][0] as DeleteRefreshScheduleCommand;
+      expect(mockQuicksightSend).toHaveBeenCalledTimes( 2 );
+      const sentCommand = mockQuicksightSend.mock.calls[1][0] as DeleteRefreshScheduleCommand;
       expect(sentCommand.input.AwsAccountId).toBe(MOCK_AWS_ACCOUNT_ID);
       expect(sentCommand.input.DataSetId).toBe(spiceDataSet.DataSetId);
       expect(sentCommand.input.ScheduleId).toBe(`${spiceDataSet.DataSetId}-schedule`);
@@ -278,7 +324,7 @@ describe('AwsQuickSightWrapper', () => {
       // ACT & ASSERT: The method should catch this error and resolve successfully.
       await expect(wrapper.deleteRefreshSchedule(spiceDataSet)).resolves.toBeUndefined();
 
-      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy).toHaveBeenCalledTimes( 0 );
     });
 
     it('should rethrow errors', async () => {
@@ -288,6 +334,50 @@ describe('AwsQuickSightWrapper', () => {
 
       // ACT & ASSERT
       await expect( async () => await wrapper.deleteRefreshSchedule(spiceDataSet)).rejects.toThrow("Send fail");
+    });
+  });
+
+  describe('AwsQuickSightWrapper - hasTagsByRegexp', () => {
+    // Stub StsWrapper as hasTagsByPrefix does not make network or STS calls
+    const mockSts = {} as AwsStsWrapper;
+    const wrapper = new AwsQuickSightWrapper(mockSts);
+
+    const baseDataSet: DataSetSummaryWithTags = {
+      Arn: 'arn:aws:quicksight:us-east-1:123456789012:dataset/test-dataset',
+      DataSetId: 'test-dataset',
+      Name: 'Test Dataset',
+      tags: {
+        'schedule:type': 'INCREMENTAL',
+        'schedule:interval': 'HOURLY',
+        'owner': 'analytics-team',
+        'unsetProperty': undefined,
+        'emptyProperty': '',
+      },
+    };
+
+    it('should return true when at least one tag key starts with the prefix and has a valid value', () => {
+      expect(wrapper.hasTagsByRegexp(baseDataSet, 'schedule:.*')).toBe(true);
+    });
+
+    it('should return true when matching an exact full key with a valid value', () => {
+      expect(wrapper.hasTagsByRegexp(baseDataSet, 'owner')).toBe(true);
+    });
+
+    it('should return false when no tag keys match the prefix', () => {
+      expect(wrapper.hasTagsByRegexp(baseDataSet, 'billing:.*')).toBe(false);
+    });
+
+    it('should return false when the prefix matches a key whose value is undefined or an empty string', () => {
+      expect(wrapper.hasTagsByRegexp(baseDataSet, 'unsetProperty')).toBe(false);
+      expect(wrapper.hasTagsByRegexp(baseDataSet, 'emptyProperty')).toBe(false);
+    });
+
+    it('should return false when dataset tags are empty', () => {
+      const emptyDataSet: DataSetSummaryWithTags = {
+        ...baseDataSet,
+        tags: {},
+      };
+      expect(wrapper.hasTagsByRegexp(emptyDataSet, 'schedule:.*')).toBe(false);
     });
   });
 
