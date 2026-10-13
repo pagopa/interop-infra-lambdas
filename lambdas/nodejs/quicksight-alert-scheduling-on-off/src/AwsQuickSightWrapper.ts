@@ -13,7 +13,12 @@ import {
     DayOfWeek
 } from "@aws-sdk/client-quicksight";
 import { AwsStsWrapper } from "./AwsStsWrapper";
-import { computeScheduleSuffix, fromKeyValueArrayToObject, delay } from './Utils'
+import { 
+  computeScheduleSuffix, 
+  fromKeyValueArrayToObject, 
+  delay, 
+  getUTCHHMMString 
+} from './Utils'
 
 export type DataSetSummaryWithTags = DataSetSummary & { tags:{ [key: string]: string | undefined }}
 export type RefreshParameters = {
@@ -147,7 +152,7 @@ export class AwsQuickSightWrapper {
     const scheduleId = dataSetId + "-schedule" + computeScheduleSuffix( index );
 
     try {
-      const scheduleFrequency = this.#parseScheduleFrequency( refreshParams.refreshInterval );
+      const scheduleFrequency = this.#parseScheduleFrequency( refreshParams.refreshInterval, refreshParams.whenStart );
 
       const scheduleConfig : CreateRefreshScheduleRequest = { 
         AwsAccountId: await this.#sts.getAwsAccountId(),
@@ -177,7 +182,7 @@ export class AwsQuickSightWrapper {
     }
   }
 
-  #parseScheduleFrequency( refreshInterval: string): RefreshFrequency {
+  #parseScheduleFrequency( refreshInterval: string, whenStart?: Date): RefreshFrequency {
     const WEEKLY_PREFIX = "WEEKLY_";
     const MONTHLY_PREFIX = "MONTHLY_";
 
@@ -197,6 +202,18 @@ export class AwsQuickSightWrapper {
         RefreshOnDay: {
           DayOfMonth: refreshInterval.substring( MONTHLY_PREFIX.length )
         }
+      }
+    }
+    else if ( refreshInterval === RefreshInterval.DAILY ) {
+      result = {
+        Interval: RefreshInterval.DAILY,
+        Timezone: "UTC"
+      }
+
+      if( whenStart ) {
+        // Start 1 minute after whenStart
+        const timeOfDay = new Date( whenStart.getTime() + 1000 * 60 );
+        result.TimeOfTheDay = getUTCHHMMString( timeOfDay );
       }
     }
     else {

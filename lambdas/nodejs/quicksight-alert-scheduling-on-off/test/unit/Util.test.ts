@@ -5,7 +5,8 @@ import {
   KeyValue, 
   delay, 
   getRandomFutureDate, 
-  intFromEnv 
+  intFromEnv,
+  getUTCHHMMString
 } from '../../src/Utils';
 
 // We spy on console.error to ensure it's called without polluting test logs.
@@ -233,4 +234,37 @@ describe('intFromEnv', () => {
     expect(() => intFromEnv(TEST_ENV_KEY)).toThrowError( expectedErrorMessage );
   });
 
+});
+
+describe('getUTCHHMMString', () => {
+  it('pads single-digit hours and minutes with leading zeros', () => {
+    const date = new Date('2026-05-10T04:07:00Z');
+    expect(getUTCHHMMString(date)).toBe('04:07');
+  });
+
+  it('formats midnight correctly as 00:00', () => {
+    const date = new Date('2026-01-01T00:00:00Z');
+    expect(getUTCHHMMString(date)).toBe('00:00');
+  });
+
+  it('formats the end of the day correctly as 23:59', () => {
+    const date = new Date('2026-12-31T23:59:59Z');
+    expect(getUTCHHMMString(date)).toBe('23:59');
+  });
+
+  it('extracts UTC values regardless of local or specified time zone offsets', () => {
+    // 18:30 in UTC+05:30 corresponds to 13:00 UTC
+    const date = new Date('2026-07-15T18:30:00+05:30');
+    expect(getUTCHHMMString(date)).toBe('13:00');
+  });
+
+  it('ignores seconds and milliseconds', () => {
+    const date = new Date('2026-03-20T15:45:59.999Z');
+    expect(getUTCHHMMString(date)).toBe('15:45');
+  });
+
+  it('returns "NaN:NaN" when given an invalid Date', () => {
+    const invalidDate = new Date('invalid-date-string');
+    expect(getUTCHHMMString(invalidDate)).toBe('NaN:NaN');
+  });
 });

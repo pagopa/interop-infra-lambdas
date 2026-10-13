@@ -272,7 +272,6 @@ describe('AwsQuickSightWrapper', () => {
     });
 
     it('should support dayOfMonth for MONTHLY schedule', async () => {
-      // ARRANGE: Mock the AWS SDK to throw the specific "already exists" error.
       mockQuicksightSend.mockResolvedValueOnce({});
       const wrapper = new AwsQuickSightWrapper(mockStsWrapper);
 
@@ -287,6 +286,25 @@ describe('AwsQuickSightWrapper', () => {
       expect( sentCommand.input.Schedule?.RefreshType ).toBe('FULL_REFRESH')
       expect( sentCommand.input.Schedule?.ScheduleFrequency?.Interval ).toBe('MONTHLY')
       expect( sentCommand.input.Schedule?.ScheduleFrequency?.RefreshOnDay?.DayOfMonth ).toBe('10')
+    });
+
+    it('should set TimeOfTheDay for DAILY schedulw', async () => {
+      mockQuicksightSend.mockResolvedValueOnce({});
+      const wrapper = new AwsQuickSightWrapper(mockStsWrapper);
+
+      // ACT 
+      const whenStart = new Date( Date.UTC(2026, 5, 5, 13, 1, 12, 304))
+      const scheduleConfig = { refreshType: 'FULL_REFRESH', refreshInterval: 'DAILY', index: 0, whenStart }
+      await wrapper.createRefreshSchedule(spiceDataSet, scheduleConfig )
+      
+      // ASSERT: The method should resolve successfully.
+      expect( mockQuicksightSend ).toHaveBeenCalledOnce()
+
+      const sentCommand = mockQuicksightSend.mock.calls[0][0] as CreateRefreshScheduleCommand;
+      expect( sentCommand.input.Schedule?.RefreshType ).toBe('FULL_REFRESH')
+      expect( sentCommand.input.Schedule?.ScheduleFrequency?.Interval ).toBe('DAILY')
+      expect( sentCommand.input.Schedule?.ScheduleFrequency?.Timezone ).toBe('UTC')
+      expect( sentCommand.input.Schedule?.ScheduleFrequency?.TimeOfTheDay ).toBe('13:02')
     });
   });
 

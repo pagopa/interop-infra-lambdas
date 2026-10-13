@@ -56,3 +56,10 @@ export function intFromEnv( envVarName: string ): number | null {
   
   return result;
 }
+
+export function getUTCHHMMString(date: Date): string {
+  const hours = date.getUTCHours().toString().padStart(2, '0');
+  const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+  
+  return `${hours}:${minutes}`;
+}
