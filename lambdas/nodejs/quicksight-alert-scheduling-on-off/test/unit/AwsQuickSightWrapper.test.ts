@@ -199,7 +199,7 @@ describe('AwsQuickSightWrapper', () => {
       const wrapper = new AwsQuickSightWrapper(mockStsWrapper);
 
       // ACT & ASSERT
-      const scheduleConfig = { refreshType: 'INVALID_TYPE', refreshInterval: 'MINUTE15' }
+      const scheduleConfig = { refreshType: 'INVALID_TYPE', refreshInterval: 'MINUTE15', index: 0, whenStart: undefined }
       await expect(wrapper.createRefreshSchedule(spiceDataSet, scheduleConfig )).rejects.toThrow(
         'refresh type not supported: INVALID_TYPE'
       );
@@ -213,7 +213,7 @@ describe('AwsQuickSightWrapper', () => {
       const wrapper = new AwsQuickSightWrapper(mockStsWrapper);
 
       // ACT 
-      const scheduleConfig = { refreshType: 'FULL_REFRESH', refreshInterval: 'HOURLY' }
+      const scheduleConfig = { refreshType: 'FULL_REFRESH', refreshInterval: 'HOURLY', whenStart: undefined }
       await wrapper.createRefreshSchedule(spiceDataSet, scheduleConfig)
       
       // ASSERT: The method should catch this specific error and resolve successfully.
@@ -222,6 +222,7 @@ describe('AwsQuickSightWrapper', () => {
       const sentCommand = mockQuicksightSend.mock.calls[0][0] as CreateRefreshScheduleCommand;
       expect( sentCommand.input.Schedule?.RefreshType ).toBe('FULL_REFRESH')
       expect( sentCommand.input.Schedule?.ScheduleFrequency?.Interval ).toBe('HOURLY')
+      expect( sentCommand.input.Schedule?.ScheduleFrequency?.TimeOfTheDay ).toBeUndefined()
 
       expect(warnSpy).toHaveBeenCalledTimes(1);
     });
@@ -232,7 +233,8 @@ describe('AwsQuickSightWrapper', () => {
       const wrapper = new AwsQuickSightWrapper(mockStsWrapper);
 
       // ACT 
-      const scheduleConfig = { refreshType: 'INCREMENTAL_REFRESH', refreshInterval: 'HOURLY' }
+      const whenStart = new Date( Date.UTC(2026, 5, 5, 13, 1, 12, 304))
+      const scheduleConfig = { refreshType: 'INCREMENTAL_REFRESH', refreshInterval: 'HOURLY', index: 0, whenStart }
       await wrapper.createRefreshSchedule(spiceDataSet, scheduleConfig )
       
       // ASSERT: The method should resolve successfully.
@@ -241,6 +243,7 @@ describe('AwsQuickSightWrapper', () => {
       const sentCommand = mockQuicksightSend.mock.calls[0][0] as CreateRefreshScheduleCommand;
       expect( sentCommand.input.Schedule?.RefreshType ).toBe('INCREMENTAL_REFRESH')
       expect( sentCommand.input.Schedule?.ScheduleFrequency?.Interval ).toBe('HOURLY')
+      expect( sentCommand.input.Schedule?.ScheduleFrequency?.TimeOfTheDay ).toBeUndefined()
     });
 
     it('should rethrow errors', async () => {
@@ -259,7 +262,8 @@ describe('AwsQuickSightWrapper', () => {
       const wrapper = new AwsQuickSightWrapper(mockStsWrapper);
 
       // ACT 
-      const scheduleConfig = { refreshType: 'FULL_REFRESH', refreshInterval: 'WEEKLY_MONDAY', index: 0, whenStart: undefined }
+      const whenStart = new Date( Date.UTC(2026, 5, 5, 13, 1, 12, 304))
+      const scheduleConfig = { refreshType: 'FULL_REFRESH', refreshInterval: 'WEEKLY_MONDAY', index: 0, whenStart }
       await wrapper.createRefreshSchedule(spiceDataSet, scheduleConfig )
       
       // ASSERT: The method should resolve successfully.
@@ -269,6 +273,8 @@ describe('AwsQuickSightWrapper', () => {
       expect( sentCommand.input.Schedule?.RefreshType ).toBe('FULL_REFRESH')
       expect( sentCommand.input.Schedule?.ScheduleFrequency?.Interval ).toBe('WEEKLY')
       expect( sentCommand.input.Schedule?.ScheduleFrequency?.RefreshOnDay?.DayOfWeek ).toBe('MONDAY')
+      expect( sentCommand.input.Schedule?.ScheduleFrequency?.Timezone ).toBe('UTC')
+      expect( sentCommand.input.Schedule?.ScheduleFrequency?.TimeOfTheDay ).toBe('13:02')
     });
 
     it('should support dayOfMonth for MONTHLY schedule', async () => {
@@ -276,7 +282,8 @@ describe('AwsQuickSightWrapper', () => {
       const wrapper = new AwsQuickSightWrapper(mockStsWrapper);
 
       // ACT 
-      const scheduleConfig = { refreshType: 'FULL_REFRESH', refreshInterval: 'MONTHLY_10', index: 0, whenStart: undefined }
+      const whenStart = new Date( Date.UTC(2026, 5, 5, 13, 1, 12, 304))
+      const scheduleConfig = { refreshType: 'FULL_REFRESH', refreshInterval: 'MONTHLY_10', index: 0, whenStart }
       await wrapper.createRefreshSchedule(spiceDataSet, scheduleConfig )
       
       // ASSERT: The method should resolve successfully.
@@ -286,6 +293,8 @@ describe('AwsQuickSightWrapper', () => {
       expect( sentCommand.input.Schedule?.RefreshType ).toBe('FULL_REFRESH')
       expect( sentCommand.input.Schedule?.ScheduleFrequency?.Interval ).toBe('MONTHLY')
       expect( sentCommand.input.Schedule?.ScheduleFrequency?.RefreshOnDay?.DayOfMonth ).toBe('10')
+      expect( sentCommand.input.Schedule?.ScheduleFrequency?.Timezone ).toBe('UTC')
+      expect( sentCommand.input.Schedule?.ScheduleFrequency?.TimeOfTheDay ).toBe('13:02')
     });
 
     it('should set TimeOfTheDay for DAILY schedulw', async () => {

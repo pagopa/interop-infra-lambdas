@@ -187,6 +187,7 @@ export class AwsQuickSightWrapper {
     const MONTHLY_PREFIX = "MONTHLY_";
 
     let result: RefreshFrequency;
+    let needTimeOfDay: boolean;
 
     if ( refreshInterval.startsWith( WEEKLY_PREFIX )) {
       result = {
@@ -195,6 +196,7 @@ export class AwsQuickSightWrapper {
           DayOfWeek: refreshInterval.substring( WEEKLY_PREFIX.length ) as DayOfWeek
         }
       }
+      needTimeOfDay = true;
     }
     else if ( refreshInterval.startsWith( MONTHLY_PREFIX )) {
       result = {
@@ -203,21 +205,24 @@ export class AwsQuickSightWrapper {
           DayOfMonth: refreshInterval.substring( MONTHLY_PREFIX.length )
         }
       }
+      needTimeOfDay = true;
     }
     else if ( refreshInterval === RefreshInterval.DAILY ) {
       result = {
-        Interval: RefreshInterval.DAILY,
-        Timezone: "UTC"
+        Interval: RefreshInterval.DAILY
       }
-
-      if( whenStart ) {
-        // Start 1 minute after whenStart
-        const timeOfDay = new Date( whenStart.getTime() + 1000 * 60 );
-        result.TimeOfTheDay = getUTCHHMMString( timeOfDay );
-      }
+      needTimeOfDay = true;
     }
     else {
       result = { Interval: refreshInterval as RefreshInterval };
+      needTimeOfDay = false;
+    }
+
+    if( needTimeOfDay && whenStart ) {
+      // Start 1 minute after whenStart
+      const timeOfDay = new Date( whenStart.getTime() + 1000 * 60 );
+      result.TimeOfTheDay = getUTCHHMMString( timeOfDay );
+      result.Timezone = "UTC";
     }
     return result;
   }
