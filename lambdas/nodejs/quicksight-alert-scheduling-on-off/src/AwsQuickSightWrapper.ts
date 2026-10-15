@@ -218,7 +218,10 @@ export class AwsQuickSightWrapper {
       needTimeOfDay = false;
     }
 
-    if( needTimeOfDay && whenStart ) {
+    if (needTimeOfDay) {
+      if (!whenStart) {
+        throw new Error(`whenStart is required for ${refreshInterval} refresh schedules`);
+      }
       // Start 1 minute after whenStart
       const timeOfDay = new Date( whenStart.getTime() + 1000 * 60 );
       result.TimeOfTheDay = getUTCHHMMString( timeOfDay );
