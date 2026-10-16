@@ -13,7 +13,12 @@ import {
     DayOfWeek
 } from "@aws-sdk/client-quicksight";
 import { AwsStsWrapper } from "./AwsStsWrapper";
-import { computeScheduleSuffix, fromKeyValueArrayToObject, delay } from './Utils'
+import { 
+  computeScheduleSuffix, 
+  fromKeyValueArrayToObject, 
+  delay, 
+  getUTCHHMMString 
+} from './Utils'
 
 export type DataSetSummaryWithTags = DataSetSummary & { tags:{ [key: string]: string | undefined }}
 export type RefreshParameters = {
@@ -147,7 +152,7 @@ export class AwsQuickSightWrapper {
     const scheduleId = dataSetId + "-schedule" + computeScheduleSuffix( index );
 
     try {
-      const scheduleFrequency = this.#parseScheduleFrequency( refreshParams.refreshInterval );
+      const scheduleFrequency = this.#parseScheduleFrequency( refreshParams.refreshInterval, refreshParams.whenStart );
 
       const scheduleConfig : CreateRefreshScheduleRequest = { 
         AwsAccountId: await this.#sts.getAwsAccountId(),
@@ -177,11 +182,12 @@ export class AwsQuickSightWrapper {
     }
   }
 
-  #parseScheduleFrequency( refreshInterval: string): RefreshFrequency {
+  #parseScheduleFrequency( refreshInterval: string, whenStart?: Date): RefreshFrequency {
     const WEEKLY_PREFIX = "WEEKLY_";
     const MONTHLY_PREFIX = "MONTHLY_";
 
     let result: RefreshFrequency;
+    let needTimeOfDay: boolean;
 
     if ( refreshInterval.startsWith( WEEKLY_PREFIX )) {
       result = {
@@ -190,6 +196,7 @@ export class AwsQuickSightWrapper {
           DayOfWeek: refreshInterval.substring( WEEKLY_PREFIX.length ) as DayOfWeek
         }
       }
+      needTimeOfDay = true;
     }
     else if ( refreshInterval.startsWith( MONTHLY_PREFIX )) {
       result = {
@@ -198,9 +205,27 @@ export class AwsQuickSightWrapper {
           DayOfMonth: refreshInterval.substring( MONTHLY_PREFIX.length )
         }
       }
+      needTimeOfDay = true;
+    }
+    else if ( refreshInterval === RefreshInterval.DAILY ) {
+      result = {
+        Interval: RefreshInterval.DAILY
+      }
+      needTimeOfDay = true;
     }
     else {
       result = { Interval: refreshInterval as RefreshInterval };
+      needTimeOfDay = false;
+    }
+
+    if (needTimeOfDay) {
+      if (!whenStart) {
+        throw new Error(`whenStart is required for ${refreshInterval} refresh schedules`);
+      }
+      // Start 1 minute after whenStart
+      const timeOfDay = new Date( whenStart.getTime() + 1000 * 60 );
+      result.TimeOfTheDay = getUTCHHMMString( timeOfDay );
+      result.Timezone = "UTC";
     }
     return result;
   }
