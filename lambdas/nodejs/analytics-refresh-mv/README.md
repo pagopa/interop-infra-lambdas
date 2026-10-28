@@ -37,6 +37,10 @@ All the parameters are read from environment variables:
    given default value is 0. Technically this parameter is used for every materialized view with 
    `state` field of table [SVV_MV_INFO](https://docs.aws.amazon.com/redshift/latest/dg/r_SVV_MV_INFO.html)
    not equal to 1.
+- Every variable in the form `MIN_REFRESH_DELAY_SECONDS__<uppercased-schema-name>_<uppercased-matview-name>`
+  contain the minimum number of seconds between two refresh of the materialized view with name `matview-name`
+  in the schema `schema-name`. Individual configuration, if present, win over generic 
+  `(NON_)INCREMENTAL_MV_MIN_INTERVAL_SECONDS`.
 
 ## Algorithm
 The used algorithm is:
