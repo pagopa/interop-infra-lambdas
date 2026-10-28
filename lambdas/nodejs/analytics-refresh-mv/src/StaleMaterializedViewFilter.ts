@@ -1,5 +1,7 @@
 import { ViewAndLevel } from "./ViewAndLevel";
 
+const MIN_REFRESH_DELAY_VARIABLES_PREFIX = 'MIN_REFRESH_DELAY_SECONDS__';
+
 type RefreshFrequencyFilter = {
   minimumRefreshDelaySeconds: number
 }
@@ -8,6 +10,7 @@ export class StaleMaterializedViewFilter {
   
   #incrementalRefreshFilter: RefreshFrequencyFilter;
   #notIncrementalRefreshFilter: RefreshFrequencyFilter;
+  #individualRefreshFilters: Record<string, RefreshFrequencyFilter>
 
   constructor( env: NodeJS.ProcessEnv ) {
     console.log("Configuring filters:")
@@ -17,6 +20,17 @@ export class StaleMaterializedViewFilter {
 
     this.#notIncrementalRefreshFilter = this.#configureFilter( env, "NOT_INCREMENTAL_MV_MIN_INTERVAL_SECONDS" );
     console.log(" - Not incremental views min delay:", this.#notIncrementalRefreshFilter)
+
+    console.log(" - Scan for specific view refresh min delay:", this.#notIncrementalRefreshFilter)
+    this.#individualRefreshFilters = {}
+    for (const varName of Object.keys(env)) {
+      if (varName.startsWith(MIN_REFRESH_DELAY_VARIABLES_PREFIX)) {
+        const schemaViewName = varName.substring( MIN_REFRESH_DELAY_VARIABLES_PREFIX.length )
+        const viewRefreshFilter = this.#configureFilter( env, varName );
+        console.log("    ", varName, " set min delay ", viewRefreshFilter, " for view ", schemaViewName)
+        this.#individualRefreshFilters[ schemaViewName ] = viewRefreshFilter;
+      }
+    }
   }
 
   #configureFilter( env: NodeJS.ProcessEnv, name: string ) {
@@ -79,11 +93,19 @@ export class StaleMaterializedViewFilter {
 
   #testOne( el: ViewAndLevel, nowEpoch: number ): boolean {
     let result: boolean;
-    if( el.incrementalRefreshNotSupported ) {
-      result = this.#applyFilter( el, this.#notIncrementalRefreshFilter, nowEpoch );
+
+    const viewSchemaName = ( el.mvSchemaName + "_" + el.mvName ).toUpperCase()
+    const viewSpecificFilter = this.#individualRefreshFilters[ viewSchemaName ]
+    if ( viewSpecificFilter ) {
+      result = this.#applyFilter( el, viewSpecificFilter, nowEpoch );
     }
     else {
-      result = this.#applyFilter( el, this.#incrementalRefreshFilter, nowEpoch );
+      if( el.incrementalRefreshNotSupported ) {
+        result = this.#applyFilter( el, this.#notIncrementalRefreshFilter, nowEpoch );
+      }
+      else {
+        result = this.#applyFilter( el, this.#incrementalRefreshFilter, nowEpoch );
+      }
     }
     return result;
   }
