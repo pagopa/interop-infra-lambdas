@@ -75,6 +75,30 @@ describe('StaleMaterializedViewFilter', () => {
       expect(result[0].mvName).toBe('stale');
     });
 
+    it('should parse individual delay configuration correctly, they win over general config', async () => {
+      const mockEnv = { 
+        INCREMENTAL_MV_MIN_INTERVAL_SECONDS: '90',
+        MIN_REFRESH_DELAY_SECONDS__VIEWS_MV_00_TEST1: '60',  // 1 minute 
+        MIN_REFRESH_DELAY_SECONDS__VIEWS_MV_00_TEST2: '7200' // 2 hours
+      }; 
+      const filter = new StaleMaterializedViewFilter(mockEnv);
+      
+      const staleMv: ViewAndLevel = {
+        mvName: 'mv_00_test1', mvSchemaName: 'views', mvLevel: 1, incrementalRefreshNotSupported: false,
+        lastRefreshStartTimeEpoch: 0,
+        lastRefreshEndTimeEpoch: NOW_EPOCH - 61 // Refreshed just over 1 minute -> should be kept
+      };
+      const recentMv: ViewAndLevel = {
+        mvName: 'mv_00_test2', mvSchemaName: 'views', mvLevel: 1, incrementalRefreshNotSupported: false,
+        lastRefreshStartTimeEpoch: 0,
+        lastRefreshEndTimeEpoch: NOW_EPOCH - 3600 // Refreshed just 1 hour ago -> should be removed
+      };
+
+      const result: ViewAndLevel[] = await filter.filterAll([staleMv, recentMv]);
+      expect(result).toHaveLength(1);
+      expect(result[0].mvName).toBe('mv_00_test1');
+    });
+
     it('should default to a 0-second delay if environment variables are not set', async () => {
       const filter = new StaleMaterializedViewFilter({}); // Empty env
       
